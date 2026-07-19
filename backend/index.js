@@ -9,8 +9,11 @@ const PORT = process.env.PORT || 3001
 
 // ── Security ──────────────────────────────────────────────────────────────────
 app.use(helmet())
+const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+const frontendUrl = rawFrontendUrl.endsWith('/') ? rawFrontendUrl.slice(0, -1) : rawFrontendUrl
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: frontendUrl,
   credentials: true,
 }))
 app.use(express.json({ limit: '10mb' }))
