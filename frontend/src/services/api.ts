@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 
-const API_URL = import.meta.env.VITE_API_URL as string
+const rawApiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:3001'
+const API_URL = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
 
 async function authFetch(path: string, options: RequestInit = {}) {
   const { data: { session } } = await supabase.auth.getSession()
