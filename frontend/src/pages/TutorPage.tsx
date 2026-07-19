@@ -6,6 +6,8 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Send, Bot, User, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useSearchParams } from 'react-router-dom'
+import { supabase } from '@/services/supabaseClient'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -25,6 +27,36 @@ export function TutorPage() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [searchParams] = useSearchParams()
+  const sessionId = searchParams.get('session')
+
+  useEffect(() => {
+    async function loadSessionMessages() {
+      if (!sessionId) {
+        setMessages([])
+        return
+      }
+      setLoading(true)
+      try {
+        const { data, error } = await supabase
+          .from('tutor_messages')
+          .select('role, content')
+          .eq('session_id', sessionId)
+          .order('created_at', { ascending: true })
+
+        if (error) throw error
+        if (data) {
+          setMessages(data.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })))
+        }
+      } catch (err) {
+        console.error('Error loading tutor messages:', err)
+        toast.error('Failed to load chat history')
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadSessionMessages()
+  }, [sessionId])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -39,7 +71,7 @@ export function TutorPage() {
     setInput('')
     setLoading(true)
     try {
-      const res = await api.tutor(next)
+      const res = await api.tutor(next, sessionId)
       if (!res.body) throw new Error('No response body')
       
       // Pre-insert a blank assistant message that we will stream into

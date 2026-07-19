@@ -69,7 +69,7 @@ export function HistoryPage() {
           ),
           // 6. Tutor Sessions
           supabase.from('tutor_sessions').select('id, title, created_at').eq('user_id', user.id).then(({ data }) => 
-            (data || []).map(x => ({ id: x.id, type: 'tutor_sessions' as Tab, title: x.title, created_at: x.created_at, link: '/tutor', meta: 'AI Chat history' }))
+            (data || []).map(x => ({ id: x.id, type: 'tutor_sessions' as Tab, title: x.title, created_at: x.created_at, link: `/tutor?session=${x.id}`, meta: 'AI Chat history' }))
           )
         ]
 

@@ -301,7 +301,7 @@ export function DashboardPage() {
                         </div>
                       </div>
                       <Link
-                        to={`/${act.tool}`}
+                        to={act.tool === 'tutor' ? `/tutor?session=${act.ref_id}` : `/${act.tool}`}
                         className="text-xs font-mono border border-foreground/15 hover:border-foreground/50 px-3 py-1.5 hover:bg-foreground/5 transition-all"
                       >
                         Open

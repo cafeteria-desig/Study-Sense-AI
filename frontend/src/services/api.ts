@@ -18,8 +18,8 @@ async function authFetch(path: string, options: RequestInit = {}) {
 }
 
 export const api = {
-  tutor: (messages: { role: string; content: string }[]) =>
-    authFetch('/api/tutor', { method: 'POST', body: JSON.stringify({ messages }) }),
+  tutor: (messages: { role: string; content: string }[], sessionId?: string | null) =>
+    authFetch('/api/tutor', { method: 'POST', body: JSON.stringify({ messages, sessionId }) }),
 
   notes: (topic: string, style?: string) =>
     authFetch('/api/notes', { method: 'POST', body: JSON.stringify({ topic, style }) }),
