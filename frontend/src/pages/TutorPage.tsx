@@ -129,7 +129,7 @@ export function TutorPage() {
 
   return (
     <AppShell>
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 3.5rem)', maxHeight: '100dvh' }}>
+      <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-dvh max-h-[calc(100dvh-3.5rem)] md:max-h-dvh">
         {/* Header */}
         <div className="border-b border-foreground/10 px-6 py-4 flex items-center justify-between flex-shrink-0">
           <div>

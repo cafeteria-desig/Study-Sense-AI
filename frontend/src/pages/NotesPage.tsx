@@ -62,7 +62,7 @@ export function NotesPage() {
 
   return (
     <AppShell>
-      <div className="max-w-3xl mx-auto px-6 py-10">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="mb-10">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
@@ -74,7 +74,7 @@ export function NotesPage() {
         </div>
 
         {/* Form */}
-        <div className="border border-foreground/10 p-6 space-y-5 mb-8">
+        <div className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-8">
           <div className="space-y-2">
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Topic</label>
             <input
@@ -141,7 +141,7 @@ export function NotesPage() {
         {/* Result */}
         {notes && (
           <div className="border border-foreground/10">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-foreground/10">
+            <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-foreground/10">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                 <span className="font-mono text-sm font-medium">{notes.title}</span>
@@ -162,7 +162,7 @@ export function NotesPage() {
                 </button>
               </div>
             </div>
-            <div className="px-6 py-6 prose prose-sm max-w-none font-mono text-sm [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-base [&_strong]:font-semibold [&_code]:bg-foreground/5 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_pre]:bg-foreground/5 [&_pre]:p-4 [&_pre]:text-xs [&_li]:my-0.5">
+            <div className="px-4 py-5 md:px-6 md:py-6 prose prose-sm max-w-none font-mono text-sm [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-base [&_strong]:font-semibold [&_code]:bg-foreground/5 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_pre]:bg-foreground/5 [&_pre]:p-4 [&_pre]:text-xs [&_li]:my-0.5">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes.content}</ReactMarkdown>
             </div>
           </div>

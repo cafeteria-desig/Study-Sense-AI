@@ -123,7 +123,7 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main content */}
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
         {/* Mobile top bar */}
-        <header className="md:hidden h-14 border-b border-foreground/10 flex items-center justify-between px-4 flex-shrink-0">
+        <header className="md:hidden h-14 border-b border-foreground/10 flex items-center justify-between px-4 flex-shrink-0 bg-background/80 backdrop-blur-md sticky top-0 z-40">
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"

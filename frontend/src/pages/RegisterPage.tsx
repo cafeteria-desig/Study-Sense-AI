@@ -34,7 +34,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 md:px-6">
       <Link
         to="/"
         className="absolute top-8 left-8 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors"
@@ -53,7 +53,7 @@ export function RegisterPage() {
           Free plan · No credit card · Cancel any time.
         </p>
 
-        <div className="border border-foreground/10 p-8">
+        <div className="border border-foreground/10 p-6 md:p-8">
           {success ? (
             <div className="text-center py-8">
               <p className="text-2xl font-display mb-3">You&apos;re in.</p>

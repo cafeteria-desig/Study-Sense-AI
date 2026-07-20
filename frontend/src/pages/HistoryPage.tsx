@@ -149,7 +149,7 @@ export function HistoryPage() {
   return (
     <AppShell>
       <Toaster position="bottom-right" theme="dark" />
-      <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="mb-10">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
@@ -207,8 +207,8 @@ export function HistoryPage() {
               {filtered.map((item, i) => {
                 const Icon = getIcon(item.type)
                 return (
-                  <div key={item.id} className="flex items-center justify-between p-5 hover:bg-foreground/2 transition-colors">
-                    <div className="flex items-center gap-4 min-w-0">
+                  <div key={item.id} className="flex items-center justify-between p-4 md:p-5 hover:bg-foreground/2 transition-colors">
+                    <div className="flex items-center gap-3 md:gap-4 min-w-0">
                       <span className="font-mono text-xs text-muted-foreground">0{i + 1}</span>
                       <div className="p-2 border border-foreground/10 bg-foreground/3 shrink-0">
                         <Icon className="w-4 h-4 text-foreground" strokeWidth={1.5} />

@@ -82,7 +82,7 @@ export function PlannerPage() {
 
   return (
     <AppShell>
-      <div className="max-w-3xl mx-auto px-6 py-10">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="mb-10">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
@@ -97,7 +97,7 @@ export function PlannerPage() {
 
         {/* Form */}
         {!plan && (
-          <div className="border border-foreground/10 p-6 space-y-5 mb-8">
+          <div className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-8">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Subject</label>
@@ -170,15 +170,15 @@ export function PlannerPage() {
           <div className="space-y-5">
             {/* Stats */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="border border-foreground/10 p-4 text-center">
+              <div className="border border-foreground/10 p-3 md:p-4 text-center">
                 <p className="font-display text-2xl">{completedCount}</p>
                 <p className="font-mono text-xs text-muted-foreground mt-1">Sessions done</p>
               </div>
-              <div className="border border-foreground/10 p-4 text-center">
+              <div className="border border-foreground/10 p-3 md:p-4 text-center">
                 <p className="font-display text-2xl">{plan.schedule.length - completedCount}</p>
                 <p className="font-mono text-xs text-muted-foreground mt-1">Remaining</p>
               </div>
-              <div className="border border-foreground/10 p-4 text-center">
+              <div className="border border-foreground/10 p-3 md:p-4 text-center">
                 <p className={`font-display text-2xl ${daysLeft !== null && daysLeft <= 3 ? 'text-destructive' : ''}`}>
                   {daysLeft !== null ? (daysLeft <= 0 ? '!' : daysLeft) : '—'}
                 </p>
@@ -187,7 +187,7 @@ export function PlannerPage() {
             </div>
 
             {/* Progress */}
-            <div className="border border-foreground/10 p-4">
+            <div className="border border-foreground/10 p-3 md:p-4">
               <div className="flex justify-between font-mono text-xs text-muted-foreground mb-2">
                 <span>{plan.title}</span>
                 <span>{Math.round(progress)}% complete</span>
@@ -202,7 +202,7 @@ export function PlannerPage() {
 
             {/* Schedule list */}
             <div className="border border-foreground/10">
-              <div className="px-5 py-3 border-b border-foreground/10 flex items-center justify-between">
+              <div className="px-4 md:px-5 py-3 border-b border-foreground/10 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CalendarCheck className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                   <span className="font-mono text-xs text-muted-foreground uppercase tracking-wider">Schedule</span>
@@ -219,7 +219,7 @@ export function PlannerPage() {
                 {plan.schedule.map((item, i) => (
                   <div
                     key={i}
-                    className={`flex items-center gap-4 px-5 py-3.5 transition-opacity ${done[i] ? 'opacity-40' : ''}`}
+                    className={`flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 transition-opacity ${done[i] ? 'opacity-40' : ''}`}
                   >
                     <button
                       onClick={() => toggle(i)}

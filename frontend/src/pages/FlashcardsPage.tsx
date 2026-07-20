@@ -94,7 +94,7 @@ export function FlashcardsPage() {
 
   return (
     <AppShell>
-      <div className="max-w-2xl mx-auto px-6 py-10">
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="mb-10">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
@@ -109,7 +109,7 @@ export function FlashcardsPage() {
 
         {/* Form */}
         {!deck && (
-          <div className="border border-foreground/10 p-6 space-y-5">
+          <div className="border border-foreground/10 p-4 md:p-6 space-y-5">
             <div className="space-y-2">
               <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Topic</label>
               <input
@@ -164,9 +164,9 @@ export function FlashcardsPage() {
         {deck && (
           <div className="space-y-6">
             {/* Stats row */}
-            <div className="flex items-center justify-between font-mono text-xs text-muted-foreground">
+            <div className="flex items-center justify-between font-mono text-xs text-muted-foreground flex-wrap gap-2">
               <span>{deck.title}</span>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 md:gap-4 flex-wrap">
                 <span>{studied.size}/{deck.flashcards.length} studied</span>
                 <button onClick={shuffle} className="flex items-center gap-1 hover:text-foreground transition-colors">
                   <Shuffle className="w-3.5 h-3.5" />
@@ -212,7 +212,7 @@ export function FlashcardsPage() {
               >
                 {/* Front */}
                 <div
-                  className={`absolute inset-0 border flex flex-col items-center justify-center p-8 text-center bg-background ${
+                  className={`absolute inset-0 border flex flex-col items-center justify-center p-4 md:p-8 text-center bg-background ${
                     studied.has(current) ? 'border-positive/30' : 'border-foreground/10'
                   }`}
                   style={{ backfaceVisibility: 'hidden' }}
@@ -220,20 +220,20 @@ export function FlashcardsPage() {
                   <span className="text-xs font-mono text-muted-foreground mb-5 uppercase tracking-wider">
                     Question
                   </span>
-                  <p className="text-xl font-display leading-relaxed">{deck.flashcards[current].front}</p>
+                  <p className="text-lg md:text-xl font-display leading-relaxed">{deck.flashcards[current].front}</p>
                   <span className="text-xs font-mono text-muted-foreground/50 mt-6 absolute bottom-5">
                     tap to flip
                   </span>
                 </div>
                 {/* Back */}
                 <div
-                  className="absolute inset-0 border border-foreground/20 bg-foreground flex flex-col items-center justify-center p-8 text-center"
+                  className="absolute inset-0 border border-foreground/20 bg-foreground flex flex-col items-center justify-center p-4 md:p-8 text-center"
                   style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                 >
                   <span className="text-xs font-mono text-background/60 mb-5 uppercase tracking-wider">
                     Answer
                   </span>
-                  <p className="text-xl font-display leading-relaxed text-background">
+                  <p className="text-lg md:text-xl font-display leading-relaxed text-background">
                     {deck.flashcards[current].back}
                   </p>
                 </div>

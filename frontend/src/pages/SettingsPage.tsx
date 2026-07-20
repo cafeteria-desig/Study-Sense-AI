@@ -53,7 +53,7 @@ export function SettingsPage() {
 
   return (
     <AppShell>
-      <div className="max-w-xl mx-auto px-6 py-10">
+      <div className="max-w-xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="mb-10">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
@@ -65,7 +65,7 @@ export function SettingsPage() {
         </div>
 
         {/* Profile */}
-        <section className="border border-foreground/10 p-6 space-y-5 mb-5">
+        <section className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-5">
           <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Profile</h2>
           <div className="space-y-2">
             <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
@@ -116,7 +116,7 @@ export function SettingsPage() {
         </section>
 
         {/* Appearance */}
-        <section className="border border-foreground/10 p-6 mb-5">
+        <section className="border border-foreground/10 p-4 md:p-6 mb-5">
           <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-5">Appearance</h2>
           <div className="flex items-center justify-between">
             <div>
@@ -139,7 +139,7 @@ export function SettingsPage() {
         </section>
 
         {/* Account */}
-        <section className="border border-foreground/10 p-6">
+        <section className="border border-foreground/10 p-4 md:p-6">
           <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-5">Account</h2>
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">

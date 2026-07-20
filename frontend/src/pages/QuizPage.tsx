@@ -89,7 +89,7 @@ export function QuizPage() {
 
   return (
     <AppShell>
-      <div className="max-w-3xl mx-auto px-6 py-10">
+      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
         {/* Header */}
         <div className="mb-10">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
@@ -102,7 +102,7 @@ export function QuizPage() {
 
         {/* Form */}
         {!quiz && (
-          <div className="border border-foreground/10 p-6 space-y-5 mb-8">
+          <div className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-8">
             <div className="space-y-2">
               <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Topic</label>
               <input
@@ -186,14 +186,14 @@ export function QuizPage() {
 
             {/* Questions */}
             {quiz.questions.map((q, i) => (
-              <div key={i} className="border border-foreground/10 p-6">
+              <div key={i} className="border border-foreground/10 p-4 md:p-6">
                 <div className="flex items-start gap-3 mb-5">
                   <span className="font-mono text-xs text-muted-foreground flex-shrink-0 mt-0.5">
                     Q{i + 1}.
                   </span>
                   <p className="font-mono text-sm font-medium leading-relaxed">{q.question}</p>
                 </div>
-                <div className="space-y-2 pl-6">
+                <div className="space-y-2 pl-4 md:pl-6">
                   {q.options.map((opt, j) => {
                     const isSelected = selected[i] === j
                     const isCorrect = q.correct === j
@@ -234,7 +234,7 @@ export function QuizPage() {
                   })}
                 </div>
                 {submitted && (
-                  <div className="mt-4 pl-6 pt-4 border-t border-foreground/10">
+                  <div className="mt-4 pl-4 md:pl-6 pt-4 border-t border-foreground/10">
                     <p className="text-xs font-mono text-muted-foreground leading-relaxed">
                       <span className="text-foreground font-medium">Explanation: </span>
                       {q.explanation}

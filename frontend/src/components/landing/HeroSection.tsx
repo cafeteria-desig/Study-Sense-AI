@@ -78,7 +78,7 @@ export function HeroSection() {
             </span>
             <span className="block text-[clamp(3.5rem,14vw,11rem)] font-display leading-[0.9] tracking-tight text-foreground font-semibold">
               <span className="relative inline-block">
-                <span key={wordIndex} className="inline-flex overflow-hidden">
+                <span key={wordIndex} className="inline-flex overflow-hidden whitespace-nowrap">
                   {words[wordIndex].split('').map((char, i) => (
                     <span
                       key={`${wordIndex}-${i}`}

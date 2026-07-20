@@ -27,7 +27,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 md:px-6">
       {/* Back to home */}
       <Link
         to="/"
@@ -49,7 +49,7 @@ export function LoginPage() {
         </p>
 
         {/* Card */}
-        <div className="border border-foreground/10 p-8">
+        <div className="border border-foreground/10 p-6 md:p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Email */}
             <div className="space-y-2">
