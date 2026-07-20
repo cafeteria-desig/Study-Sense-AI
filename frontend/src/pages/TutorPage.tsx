@@ -6,7 +6,6 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Send, Bot, User, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/services/supabaseClient'
 
 interface Message {
@@ -27,15 +26,40 @@ export function TutorPage() {
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useState(new URLSearchParams(window.location.search))
   const sessionId = searchParams.get('session')
+  const loadedSessionIdRef = useRef<string | null>(null)
+
+  // Sync state with window location changes (e.g. going back/forward)
+  useEffect(() => {
+    const handlePopState = () => {
+      setSearchParams(new URLSearchParams(window.location.search))
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  const updateSearchParams = (params: Record<string, string>) => {
+    const nextParams = new URLSearchParams(window.location.search)
+    Object.entries(params).forEach(([key, val]) => {
+      if (val) nextParams.set(key, val)
+      else nextParams.delete(key)
+    })
+    const newUrl = `${window.location.pathname}${nextParams.toString() ? '?' + nextParams.toString() : ''}`
+    window.history.replaceState(null, '', newUrl)
+    setSearchParams(nextParams)
+  }
 
   useEffect(() => {
     async function loadSessionMessages() {
       if (!sessionId) {
         setMessages([])
+        loadedSessionIdRef.current = null
         return
       }
+      // If we are currently displaying/editing this session, don't trigger database fetch reload
+      if (sessionId === loadedSessionIdRef.current) return
+
       setLoading(true)
       try {
         const { data, error } = await supabase
@@ -47,6 +71,7 @@ export function TutorPage() {
         if (error) throw error
         if (data) {
           setMessages(data.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })))
+          loadedSessionIdRef.current = sessionId
         }
       } catch (err) {
         console.error('Error loading tutor messages:', err)
@@ -100,6 +125,10 @@ export function TutorPage() {
                 accumulated = 'Something went wrong. Please try again.'
                 break
               }
+              if (parsed.sessionId) {
+                loadedSessionIdRef.current = parsed.sessionId
+                updateSearchParams({ session: parsed.sessionId })
+              }
               if (parsed.text) {
                 accumulated += parsed.text
                 setMessages((prev) => {
@@ -139,15 +168,27 @@ export function TutorPage() {
             </span>
             <h1 className="text-2xl font-display">Ask me anything</h1>
           </div>
-          {messages.length > 0 && (
+          <div className="flex items-center gap-4">
             <button
-              onClick={() => setMessages([])}
-              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+              onClick={() => {
+                setMessages([])
+                updateSearchParams({ session: '' })
+                loadedSessionIdRef.current = null
+              }}
+              className="text-xs font-mono text-muted-foreground hover:text-foreground transition-all duration-200 border border-foreground/10 px-2.5 py-1 hover:bg-foreground/5 cursor-pointer"
             >
-              <Trash2 className="w-3.5 h-3.5" />
-              Clear
+              + New Chat
             </button>
-          )}
+            {messages.length > 0 && (
+              <button
+                onClick={() => setMessages([])}
+                className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Clear
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Messages */}

@@ -11,21 +11,50 @@ const groq = new OpenAI({
 const MODEL = 'llama-3.3-70b-versatile'
 
 router.post('/', requireAuth, async (req, res) => {
-  const { messages } = req.body
+  const { messages, sessionId: clientSessionId } = req.body
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'messages array required.' })
   }
 
   try {
+    const userMessage = messages[messages.length - 1]
+    let sessionId = clientSessionId
+
+    // Create session immediately if not provided
+    if (!sessionId) {
+      const title = userMessage.content.slice(0, 40) + (userMessage.content.length > 40 ? '...' : '')
+      const { data: newSession, error: createErr } = await supabaseAdmin
+        .from('tutor_sessions')
+        .insert({
+          user_id: req.user.id,
+          title: title || 'New Chat Session',
+        })
+        .select()
+        .single()
+      
+      if (createErr) throw createErr
+      if (newSession) {
+        sessionId = newSession.id
+        await supabaseAdmin.from('activity_log').insert({
+          user_id: req.user.id,
+          tool: 'tutor',
+          ref_id: sessionId,
+          label: `Tutor Chat: ${title}`,
+        })
+      }
+    }
+
     const stream = await groq.chat.completions.create({
       model: MODEL,
       messages: [
         {
           role: 'system',
           content:
-            'You are StudySense, an expert AI tutor. Help students understand concepts clearly and concisely. ' +
-            'Use examples, analogies, and structured explanations. Format your responses in markdown where helpful ' +
-            '(headings, bullet points, code blocks). Be encouraging and pedagogically sound.',
+            'You are StudySense, a highly formal and professional expert AI academic advisor and tutor. ' +
+            'You must always maintain an exceptionally formal, polite, academic, and respectful tone. ' +
+            'Address the student formally. Avoid informal phrasing, slang, contractions, or overly casual expressions. ' +
+            'Provide precise, clear, and comprehensive academic explanations using structured arguments, examples, ' +
+            'analogies, and professional vocabulary. Format your responses in structured markdown (headings, bold text, bullet points, code blocks).',
         },
         ...messages,
       ],
@@ -39,6 +68,9 @@ router.post('/', requireAuth, async (req, res) => {
       'Connection': 'keep-alive',
     })
 
+    // Write the sessionId to the stream first so the client can sync their state
+    res.write(`data: ${JSON.stringify({ sessionId })}\n\n`)
+
     let aiContent = ''
     for await (const chunk of stream) {
       const text = chunk.choices[0]?.delta?.content || ''
@@ -51,44 +83,6 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Persist to Supabase in background
     try {
-      const userMessage = messages[messages.length - 1]
-      let sessionId = req.body.sessionId
-
-      if (!sessionId) {
-        // Find latest active session or create new
-        const { data: activeSessions } = await supabaseAdmin
-          .from('tutor_sessions')
-          .select('id')
-          .eq('user_id', req.user.id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-
-        if (activeSessions && activeSessions.length > 0 && messages.length > 1) {
-          sessionId = activeSessions[0].id
-        } else {
-          const title = userMessage.content.slice(0, 40) + (userMessage.content.length > 40 ? '...' : '')
-          const { data: newSession } = await supabaseAdmin
-            .from('tutor_sessions')
-            .insert({
-              user_id: req.user.id,
-              title: title || 'New Chat Session',
-            })
-            .select()
-            .single()
-          
-          if (newSession) {
-            sessionId = newSession.id
-            // Log new session in activity
-            await supabaseAdmin.from('activity_log').insert({
-              user_id: req.user.id,
-              tool: 'tutor',
-              ref_id: sessionId,
-              label: `Tutor Chat: ${title}`,
-            })
-          }
-        }
-      }
-
       if (sessionId) {
         const msgsToInsert = [
           { session_id: sessionId, role: 'user', content: userMessage.content },
