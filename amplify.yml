@@ -7,7 +7,7 @@ applications:
             - cd frontend && npm ci
         build:
           commands:
-            - npm run build
+            - cd frontend && npm run build
       artifacts:
         baseDirectory: frontend/dist
         files:
@@ -15,3 +15,4 @@ applications:
       cache:
         paths:
           - frontend/node_modules/**/*
+
