@@ -9,6 +9,14 @@ const app = express()
 const PORT = process.env.PORT || 3001
 const IS_PROD = process.env.NODE_ENV === 'production'
 
+// Normalize multi-slash URLs (e.g. //api/nora -> /api/nora) to prevent CORS redirects
+app.use((req, _res, next) => {
+  if (req.url && req.url.includes('//')) {
+    req.url = req.url.replace(/\/+/g, '/')
+  }
+  next()
+})
+
 // ── Security Headers ──────────────────────────────────────────────────────────
 app.use(
   helmet({
