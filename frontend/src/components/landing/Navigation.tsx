@@ -30,22 +30,13 @@ export function Navigation() {
       }`}
     >
       <div className="max-w-[1300px] mx-auto px-6 lg:px-10 flex items-center justify-between h-20">
-        {/* Brand Logo with DotGothic16 Offbit Font */}
-        <Link to="/" className="flex items-center gap-2.5 group">
-          <motion.span
-            className="font-offbit text-xl font-bold tracking-tight text-[#F4F2EC]"
-            whileHover={{ letterSpacing: '0.06em' }}
-            transition={{ duration: 0.3 }}
-          >
-            StudySense
-          </motion.span>
-          <motion.span
-            className="font-offbit text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#8CFFB4]/30 bg-[rgba(140,255,180,0.14)] text-[#8CFFB4] uppercase tracking-wider"
-            whileHover={{ scale: 1.1 }}
-            transition={{ type: 'spring', stiffness: 400 }}
-          >
-            AI
-          </motion.span>
+        {/* Brand Logo */}
+        <Link to="/" className="flex items-center gap-3 group">
+          <img
+            src="/logo.png"
+            alt="StudySense AI"
+            className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+          />
         </Link>
 
         {/* Center Navigation Links in Offbit Font */}
