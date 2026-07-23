@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { VoiceControls } from '@/components/ui/VoiceControls'
-import { VoiceSelector } from '@/components/ui/VoiceSelector'
 import { LiveKitSpeechRoom } from '@/components/ui/LiveKitSpeechRoom'
 import { KineticGrid } from '@/components/ui/KineticGrid'
 import { GlowingSearchDock } from '@/components/ui/GlowingSearchDock'
@@ -148,7 +147,6 @@ export function TutorPage() {
             </button>
           </div>
 
-          {!isSpeechToSpeechMode && <VoiceSelector />}
         </div>
       </header>
 

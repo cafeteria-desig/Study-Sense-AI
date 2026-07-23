@@ -4,7 +4,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 
 import { VoiceControls } from '@/components/ui/VoiceControls'
-import { VoiceSelector } from '@/components/ui/VoiceSelector'
 import { DownloadDropdown } from '@/components/ui/DownloadDropdown'
 import { KineticGrid } from '@/components/ui/KineticGrid'
 import { GlowingSearchDock } from '@/components/ui/GlowingSearchDock'
@@ -209,7 +208,6 @@ export function QuizPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <VoiceSelector />
           {hasGeneratedContent && (
             <Button
               onClick={resetAll}

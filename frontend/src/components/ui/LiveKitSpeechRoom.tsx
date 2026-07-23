@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { Room, RoomEvent, Track } from 'livekit-client'
 import { Mic, MicOff, PhoneOff, Radio, Bot, User, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { VoiceSelector } from '@/components/ui/VoiceSelector'
 
 interface LiveKitSpeechRoomProps {
   authToken?: string
@@ -128,7 +127,6 @@ export function LiveKitSpeechRoom({ authToken, onClose }: LiveKitSpeechRoomProps
         </div>
 
         <div className="flex items-center gap-3">
-          <VoiceSelector />
           <Button
             size="sm"
             variant="destructive"

@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/contexts/AuthContext'
 import { VoiceControls } from '@/components/ui/VoiceControls'
-import { VoiceSelector } from '@/components/ui/VoiceSelector'
 import { KineticGrid } from '@/components/ui/KineticGrid'
 import { GlowingSearchDock } from '@/components/ui/GlowingSearchDock'
 import {
@@ -115,9 +114,6 @@ export function PlannerPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <VoiceSelector />
-        </div>
       </header>
 
       {/* Main Canvas */}
