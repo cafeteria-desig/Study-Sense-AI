@@ -108,7 +108,8 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
 
       const tryElevenLabs = async () => {
         try {
-          const apiUrl = import.meta.env.VITE_API_URL || ''
+          const rawApiUrl = (import.meta.env.VITE_API_URL as string) || ''
+          const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
           const res = await fetch(`${apiUrl}/api/tts`, {
             method: 'POST',
             headers: {

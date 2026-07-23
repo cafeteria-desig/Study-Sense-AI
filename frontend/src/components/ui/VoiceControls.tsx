@@ -59,7 +59,8 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
       setIsTtsLoading(true)
       stopAllAudio()
 
-      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const rawApiUrl = (import.meta.env.VITE_API_URL as string) || ''
+      const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
       const response = await fetch(`${apiUrl}/api/tts`, {
         method: 'POST',
         headers: {

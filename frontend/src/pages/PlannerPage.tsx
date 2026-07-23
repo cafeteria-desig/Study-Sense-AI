@@ -46,7 +46,8 @@ export function PlannerPage() {
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const rawApiUrl = (import.meta.env.VITE_API_URL as string) || ''
+      const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
       const response = await fetch(`${apiUrl}/api/live-teacher`, {
         method: 'POST',
         headers: {

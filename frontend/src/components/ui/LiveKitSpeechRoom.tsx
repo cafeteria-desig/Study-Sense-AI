@@ -26,7 +26,8 @@ export function LiveKitSpeechRoom({ authToken, onClose }: LiveKitSpeechRoomProps
     async function initLiveKitRoom() {
       try {
         setRoomState('connecting')
-        const apiUrl = import.meta.env.VITE_API_URL || ''
+        const rawApiUrl = (import.meta.env.VITE_API_URL as string) || ''
+        const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
         const res = await fetch(`${apiUrl}/api/livekit/token`, {
           method: 'POST',
           headers: {

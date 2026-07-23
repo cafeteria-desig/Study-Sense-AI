@@ -51,7 +51,8 @@ export function PdfPage() {
     setLoading(true)
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const rawApiUrl = (import.meta.env.VITE_API_URL as string) || ''
+      const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
       const response = await fetch(`${apiUrl}/api/tutor`, {
         method: 'POST',
         headers: {
