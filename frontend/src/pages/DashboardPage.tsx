@@ -101,10 +101,18 @@ export function DashboardPage() {
         <div className="max-w-[1400px] mx-auto px-6 lg:px-8 flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-3 group">
             <img
-              src="/logo.png"
-              alt="StudySense AI"
-              className="h-8 sm:h-9 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+              src="/logo-icon.png"
+              alt="StudySense AI Logo"
+              className="h-9 sm:h-10 w-auto object-contain rounded-xl transition-transform duration-300 group-hover:scale-105"
             />
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-display font-semibold tracking-tight text-[#F4F2EC] group-hover:opacity-90 transition-opacity">
+                StudySense
+              </span>
+              <span className="text-[11px] font-offbit bg-positive/10 text-positive border border-positive/20 px-2 py-0.5 rounded-full uppercase tracking-widest font-semibold">
+                AI
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

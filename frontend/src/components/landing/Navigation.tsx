@@ -30,13 +30,29 @@ export function Navigation() {
       }`}
     >
       <div className="max-w-[1300px] mx-auto px-6 lg:px-10 flex items-center justify-between h-20">
-        {/* Brand Logo */}
+        {/* Brand Logo & Title */}
         <Link to="/" className="flex items-center gap-3 group">
           <img
-            src="/logo.png"
-            alt="StudySense AI"
-            className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 group-hover:scale-[1.03]"
+            src="/logo-icon.png"
+            alt="StudySense AI Logo"
+            className="h-10 sm:h-11 w-auto object-contain rounded-xl transition-transform duration-300 group-hover:scale-105"
           />
+          <div className="flex items-center gap-2">
+            <motion.span
+              className="font-offbit text-xl sm:text-2xl font-bold tracking-tight text-[#F4F2EC]"
+              whileHover={{ letterSpacing: '0.04em' }}
+              transition={{ duration: 0.3 }}
+            >
+              StudySense
+            </motion.span>
+            <motion.span
+              className="font-offbit text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#8CFFB4]/30 bg-[rgba(140,255,180,0.14)] text-[#8CFFB4] uppercase tracking-wider"
+              whileHover={{ scale: 1.1 }}
+              transition={{ type: 'spring', stiffness: 400 }}
+            >
+              AI
+            </motion.span>
+          </div>
         </Link>
 
         {/* Center Navigation Links in Offbit Font */}
