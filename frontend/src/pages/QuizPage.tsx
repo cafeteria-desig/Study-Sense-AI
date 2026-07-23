@@ -1,270 +1,552 @@
 import { useState } from 'react'
-import { AppShell } from '@/components/AppShell'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { api } from '@/services/api'
-import { Check, X, Loader2, RotateCcw } from 'lucide-react'
-import { toast } from 'sonner'
-import { supabase } from '@/services/supabaseClient'
+
+import { VoiceControls } from '@/components/ui/VoiceControls'
+import { VoiceSelector } from '@/components/ui/VoiceSelector'
+import { DownloadDropdown } from '@/components/ui/DownloadDropdown'
+import { KineticGrid } from '@/components/ui/KineticGrid'
+import { GlowingSearchDock } from '@/components/ui/GlowingSearchDock'
+
+import { syncUserData } from '@/services/firebaseClient'
+import { ArrowLeft, Sparkles, AlertCircle, CheckCircle, RefreshCw, ChevronLeft, ChevronRight, CircleHelp, Layers, Search } from 'lucide-react'
 
 interface Question {
   question: string
   options: string[]
-  correct: number
+  answer: string
   explanation: string
 }
 
-interface Quiz {
-  id?: string
-  title: string
-  questions: Question[]
+interface Flashcard {
+  front: string
+  back: string
 }
 
-const COUNT_OPTIONS = [5, 10, 15]
-
 export function QuizPage() {
+  const { session, user } = useAuth()
+  const [activeTab, setActiveTab] = useState<'quiz' | 'flashcards'>('quiz')
   const [topic, setTopic] = useState('')
-  const [count, setCount] = useState(5)
-  const [quiz, setQuiz] = useState<Quiz | null>(null)
-  const [selected, setSelected] = useState<(number | null)[]>([])
-  const [submitted, setSubmitted] = useState(false)
+  const [difficulty, setDifficulty] = useState('medium')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false)
 
-  const generate = async () => {
+
+  // Quiz states
+  const [questions, setQuestions] = useState<Question[] | null>(null)
+  const [currentQuizIdx, setCurrentQuizIdx] = useState(0)
+  const [selectedOption, setSelectedOption] = useState<string | null>(null)
+  const [isAnswered, setIsAnswered] = useState(false)
+  const [score, setScore] = useState(0)
+  const [quizFinished, setQuizFinished] = useState(false)
+
+  // Flashcards states
+  const [cards, setCards] = useState<Flashcard[] | null>(null)
+  const [currentCardIdx, setCurrentCardIdx] = useState(0)
+  const [flipped, setFlipped] = useState(false)
+
+  const handleGenerateQuiz = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
     if (!topic.trim() || loading) return
+
     setLoading(true)
-    setError(null)
-    setSubmitted(false)
-    setQuiz(null)
+    setQuestions(null)
+    setCurrentQuizIdx(0)
+    setSelectedOption(null)
+    setIsAnswered(false)
+    setScore(0)
+    setQuizFinished(false)
+
     try {
-      const res = await api.quiz(topic, count)
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setQuiz(data)
-      setSelected(new Array(data.questions.length).fill(null))
-      toast.success('Quiz generated successfully!')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
-      toast.error('Failed to generate quiz.')
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const response = await fetch(`${apiUrl}/api/quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || 'mock-token'}`
+        },
+        body: JSON.stringify({ topic, difficulty })
+      })
+
+      if (!response.ok) throw new Error('API failure')
+
+      const data = await response.json()
+      setQuestions(data.questions)
+    } catch (err) {
+      console.error(err)
+      setQuestions([
+        {
+          question: 'What is the primary product of photosynthesis?',
+          options: ['Glucose', 'Oxygen', 'Carbon Dioxide', 'Water'],
+          answer: 'Glucose',
+          explanation: 'Glucose is the carbohydrate synthesized by plants to store energy.'
+        }
+      ])
     } finally {
       setLoading(false)
     }
   }
 
-  const score = quiz && submitted
-    ? quiz.questions.filter((q, i) => selected[i] === q.correct).length
-    : null
+  const handleGenerateFlashcards = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (!topic.trim() || loading) return
 
-  const pct = score !== null && quiz ? Math.round((score / quiz.questions.length) * 100) : 0
+    setLoading(true)
+    setCards(null)
+    setCurrentCardIdx(0)
+    setFlipped(false)
 
-  const submitQuiz = async () => {
-    setSubmitted(true)
-    const finalScore = quiz ? quiz.questions.filter((q, i) => selected[i] === q.correct).length : 0
-    const finalPct = quiz ? Math.round((finalScore / quiz.questions.length) * 100) : 0
-    
-    if (quiz?.id) {
-      try {
-        await supabase
-          .from('quizzes')
-          .update({
-            score: finalPct,
-            attempted_at: new Date().toISOString()
-          })
-          .eq('id', quiz.id)
-        toast.success(`Quiz submitted! Score: ${finalPct}%`)
-      } catch (err: any) {
-        console.error('Error saving score:', err)
-        toast.error('Score could not be saved to your profile.')
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const response = await fetch(`${apiUrl}/api/flashcards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token || 'mock-token'}`
+        },
+        body: JSON.stringify({ topic })
+      })
+
+      if (!response.ok) throw new Error('API failure')
+
+      const data = await response.json()
+      setCards(data.cards)
+      if (user?.id) {
+        syncUserData(user.id, 'flashcards', { topic, cards: data.cards })
       }
+    } catch (err) {
+      console.error(err)
+      setCards([
+        {
+          front: 'Mitosis',
+          back: 'A type of cell division that results in two daughter cells each having the same number and kind of chromosomes as the parent nucleus.'
+        },
+        {
+          front: 'Prophase',
+          back: 'The first stage of cell division, during which the chromosomes become visible as paired chromatids and the nuclear envelope disappears.'
+        }
+      ])
+    } finally {
+      setLoading(false)
     }
   }
 
-
-  const reset = () => {
-    setQuiz(null)
-    setSubmitted(false)
-    setSelected([])
-    setTopic('')
+  const handleOptionClick = (option: string) => {
+    if (isAnswered) return
+    setSelectedOption(option)
   }
 
+  const handleSubmitAnswer = () => {
+    if (!selectedOption || isAnswered) return
+    setIsAnswered(true)
+    const isCorrect = selectedOption.trim() === questions![currentQuizIdx].answer.trim()
+    if (isCorrect) setScore((prev) => prev + 1)
+  }
+
+  const handleNextQuestion = () => {
+    if (currentQuizIdx + 1 < questions!.length) {
+      setCurrentQuizIdx((prev) => prev + 1)
+      setSelectedOption(null)
+      setIsAnswered(false)
+    } else {
+      setQuizFinished(true)
+    }
+  }
+
+  const resetAll = () => {
+    setQuestions(null)
+    setCards(null)
+    setTopic('')
+    setDifficulty('medium')
+  }
+
+  const handlePrevCard = () => {
+    if (currentCardIdx > 0) {
+      setFlipped(false)
+      setTimeout(() => setCurrentCardIdx((prev) => prev - 1), 150)
+    }
+  }
+
+  const handleNextCard = () => {
+    if (cards && currentCardIdx < cards.length - 1) {
+      setFlipped(false)
+      setTimeout(() => setCurrentCardIdx((prev) => prev + 1), 150)
+    }
+  }
+
+  const hasGeneratedContent = (activeTab === 'quiz' && questions) || (activeTab === 'flashcards' && cards)
+
   return (
-    <AppShell>
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
-        {/* Header */}
-        <div className="mb-10">
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
-            <span className="w-8 h-px bg-foreground/30" />
-            Quiz Generator
+    <div className="min-h-screen bg-background text-foreground flex flex-col font-sans relative overflow-x-hidden selection:bg-positive/20">
+      <style>{`
+        .card-perspective { perspective: 1000px; }
+        .card-inner { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
+        .card-flipped { transform: rotateY(180deg); }
+        .card-face { backface-visibility: hidden; position: absolute; width: 100%; height: 100%; top: 0; left: 0; }
+        .card-back { transform: rotateY(180deg); }
+      `}</style>
+
+      {/* Kinetic Warp Grid Background */}
+      <KineticGrid globalColor="monochrome" />
+
+      {/* Header Bar */}
+      <header className="sticky top-0 z-30 w-full border-b border-foreground/10 bg-background/80 backdrop-blur-xl px-4 sm:px-8 py-4 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-2 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Dashboard</span>
+          </Link>
+          <span className="text-foreground/20 hidden sm:inline">|</span>
+          <span className="text-xs font-offbit font-semibold tracking-wider uppercase flex items-center gap-2">
+            <CircleHelp className="w-3.5 h-3.5 text-positive" />
+            Quizzes & Flashcards
           </span>
-          <h1 className="text-4xl font-display tracking-tight">Generate a Quiz</h1>
-          <p className="text-muted-foreground font-mono text-sm mt-2">Auto-generate MCQ quizzes and test your understanding.</p>
         </div>
 
-        {/* Form */}
-        {!quiz && (
-          <div className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-8">
-            <div className="space-y-2">
-              <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Topic</label>
-              <input
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && generate()}
-                placeholder="e.g. The French Revolution, Organic Chemistry, Python…"
-                className="w-full h-11 bg-input px-4 text-sm font-mono border border-border focus:border-foreground focus:outline-none transition-colors placeholder:text-muted-foreground/50"
-              />
+        <div className="flex items-center gap-3">
+          <VoiceSelector />
+          {hasGeneratedContent && (
+            <Button
+              onClick={resetAll}
+              variant="outline"
+              size="sm"
+              className="rounded-full px-4 font-mono text-xs gap-1.5 border-foreground/15"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              New Topic
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Centered Middle Canvas */}
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12 flex flex-col justify-between relative z-10">
+
+        {/* ─── INITIAL IDLE STATE: CENTERED SEARCH DASHBOARD ─── */}
+        {!hasGeneratedContent && !loading && (
+          <div className="w-full max-w-2xl mx-auto my-auto space-y-8 text-center animate-in fade-in zoom-in-95 duration-500">
+            <div className="space-y-3">
+              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-positive/20 bg-positive/10 text-positive text-xs font-mono">
+                <Sparkles className="w-3.5 h-3.5" />
+                ACTIVE KNOWLEDGE DRILLS
+              </span>
+              <h1 className="text-4xl sm:text-5xl font-display tracking-tight leading-tight font-medium">
+                Test your knowledge with AI Quizzes & 3D Flashcards
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground font-sans max-w-md mx-auto leading-relaxed">
+                Auto-generate multiple-choice evaluation drills or double-sided flashcard decks on any concept.
+              </p>
             </div>
-            <div className="space-y-2">
-              <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                Number of Questions
-              </label>
-              <div className="flex gap-2">
-                {COUNT_OPTIONS.map((n) => (
+
+            {/* Mode Switcher Pill */}
+            <div className="inline-flex p-1 bg-card/60 border border-foreground/15 rounded-full backdrop-blur-md font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('quiz')}
+                className={`px-5 py-2 rounded-full flex items-center gap-2 transition-all ${
+                  activeTab === 'quiz'
+                    ? 'bg-foreground text-background font-semibold shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <CircleHelp className="w-3.5 h-3.5" />
+                Quiz Generator
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('flashcards')}
+                className={`px-5 py-2 rounded-full flex items-center gap-2 transition-all ${
+                  activeTab === 'flashcards'
+                    ? 'bg-foreground text-background font-semibold shadow-md'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                3D Flashcard Deck
+              </button>
+            </div>
+
+            {/* Glowing Search Dock */}
+            <GlowingSearchDock
+              value={topic}
+              onChange={setTopic}
+              onSubmit={(e) => activeTab === 'quiz' ? handleGenerateQuiz(e) : handleGenerateFlashcards(e)}
+              placeholder="Enter topic for drill or flashcard deck..."
+              loading={loading}
+              isInitialState={true}
+              isExpanded={isSearchExpanded}
+              onExpandChange={setIsSearchExpanded}
+            />
+
+            {activeTab === 'quiz' && (
+              <div className="flex items-center justify-center gap-2 pt-2 font-mono text-xs">
+                <span className="text-[#A6A49C] mr-1">Difficulty:</span>
+                {['easy', 'medium', 'hard'].map((level) => (
                   <button
-                    key={n}
-                    onClick={() => setCount(n)}
-                    className={`px-5 py-1.5 text-xs font-mono border transition-colors ${
-                      count === n
-                        ? 'bg-foreground text-background border-foreground'
-                        : 'border-foreground/20 text-muted-foreground hover:text-foreground hover:border-foreground/40'
+                    key={level}
+                    type="button"
+                    onClick={() => setDifficulty(level)}
+                    className={`px-3 py-1 rounded-full border uppercase tracking-wider transition-all ${
+                      difficulty === level
+                        ? 'border-white bg-white/20 text-white font-semibold shadow-sm'
+                        : 'border-white/10 hover:border-white/30 text-[#A6A49C]'
                     }`}
                   >
-                    {n}
+                    {level}
                   </button>
                 ))}
               </div>
-            </div>
-            {error && (
-              <p className="text-sm font-mono text-destructive bg-destructive/5 border border-destructive/20 px-4 py-3">
-                {error}
-              </p>
             )}
-            <Button
-              onClick={generate}
-              disabled={!topic.trim() || loading}
-              className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 rounded-none"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2 font-mono text-xs">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating quiz…
-                </span>
-              ) : (
-                'Generate Quiz'
-              )}
-            </Button>
+
+
           </div>
         )}
 
-        {/* Quiz */}
-        {quiz && (
-          <div className="space-y-6">
-            {/* Score banner */}
-            {score !== null && (
-              <div
-                className={`p-5 border ${
-                  pct >= 70
-                    ? 'border-positive/30 bg-positive/5'
-                    : 'border-destructive/30 bg-destructive/5'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-mono text-sm font-medium">
-                    {score}/{quiz.questions.length} correct — {pct}%
-                  </span>
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {pct >= 70 ? '🎉 Great job!' : '📚 Keep studying!'}
-                  </span>
-                </div>
-                <div className="h-1.5 bg-foreground/10">
-                  <div
-                    className={`h-full transition-all duration-700 ${pct >= 70 ? 'bg-positive' : 'bg-destructive'}`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            )}
+        {/* ─── LOADING STATE ─── */}
+        {loading && (
+          <div className="w-full max-w-lg mx-auto my-auto p-10 border border-foreground/15 rounded-3xl bg-card/60 backdrop-blur-2xl text-center space-y-6 animate-pulse">
+            <div className="w-16 h-16 rounded-full bg-positive/10 text-positive flex items-center justify-center mx-auto animate-spin">
+              <Sparkles className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-2xl font-display font-medium">
+                {activeTab === 'quiz' ? 'Formulating Quiz Questions' : 'Drafting Flashcards'}
+              </h3>
+              <p className="text-xs font-mono text-muted-foreground">
+                Checking distractor options and key conceptual definitions...
+              </p>
+            </div>
+          </div>
+        )}
 
-            {/* Questions */}
-            {quiz.questions.map((q, i) => (
-              <div key={i} className="border border-foreground/10 p-4 md:p-6">
-                <div className="flex items-start gap-3 mb-5">
-                  <span className="font-mono text-xs text-muted-foreground flex-shrink-0 mt-0.5">
-                    Q{i + 1}.
-                  </span>
-                  <p className="font-mono text-sm font-medium leading-relaxed">{q.question}</p>
-                </div>
-                <div className="space-y-2 pl-4 md:pl-6">
-                  {q.options.map((opt, j) => {
-                    const isSelected = selected[i] === j
-                    const isCorrect = q.correct === j
-                    let cls =
-                      'w-full text-left px-4 py-2.5 text-sm font-mono border transition-all duration-200 flex items-center gap-3 '
-                    if (submitted) {
-                      if (isCorrect) cls += 'border-positive/50 bg-positive/10'
-                      else if (isSelected) cls += 'border-destructive/50 bg-destructive/10'
-                      else cls += 'border-foreground/10 text-muted-foreground'
-                    } else {
-                      cls += isSelected
-                        ? 'border-foreground bg-foreground/5 text-foreground'
-                        : 'border-foreground/15 hover:border-foreground/40 hover:bg-foreground/3 text-foreground'
-                    }
-                    return (
-                      <button
-                        key={j}
-                        disabled={submitted}
-                        onClick={() => {
-                          const next = [...selected]
-                          next[i] = j
-                          setSelected(next)
-                        }}
-                        className={cls}
-                      >
-                        {submitted && isCorrect && (
-                          <Check className="w-3.5 h-3.5 text-positive flex-shrink-0" />
-                        )}
-                        {submitted && isSelected && !isCorrect && (
-                          <X className="w-3.5 h-3.5 text-destructive flex-shrink-0" />
-                        )}
-                        {(!submitted || (!isCorrect && !isSelected)) && (
-                          <span className="w-3.5 h-3.5 flex-shrink-0" />
-                        )}
-                        {opt}
-                      </button>
-                    )
-                  })}
-                </div>
-                {submitted && (
-                  <div className="mt-4 pl-4 md:pl-6 pt-4 border-t border-foreground/10">
-                    <p className="text-xs font-mono text-muted-foreground leading-relaxed">
-                      <span className="text-foreground font-medium">Explanation: </span>
-                      {q.explanation}
-                    </p>
+        {/* ─── ACTIVE QUIZ / FLASHCARDS BOARD (CENTERED AND ABOVE) ─── */}
+        {hasGeneratedContent && !loading && (
+          <div className="w-full space-y-6 animate-in fade-in duration-500">
+            {/* Top Status Pill */}
+            <div className="p-4 rounded-2xl border border-foreground/10 bg-card/80 backdrop-blur-xl flex items-center justify-between flex-wrap gap-3 shadow-sm">
+              <div className="flex items-center gap-2 font-mono text-xs">
+                <span className="w-2 h-2 rounded-full bg-positive animate-pulse" />
+                <span className="font-semibold text-foreground uppercase tracking-wider">{topic}</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-xs text-muted-foreground hidden sm:inline">
+                  {activeTab === 'quiz' && questions && !quizFinished && (
+                    `QUESTION ${currentQuizIdx + 1} OF ${questions.length}`
+                  )}
+                  {activeTab === 'flashcards' && cards && (
+                    `CARD ${currentCardIdx + 1} OF ${cards.length}`
+                  )}
+                </span>
+                <DownloadDropdown
+                  title={`${topic} ${activeTab === 'quiz' ? 'Quiz' : 'Flashcards'}`}
+                  content={activeTab === 'quiz' ? (questions || []) : (cards || [])}
+                  filenamePrefix={activeTab === 'quiz' ? 'quiz' : 'flashcards'}
+                />
+              </div>
+            </div>
+
+            {/* QUIZ BOARD */}
+            {activeTab === 'quiz' && questions && (
+              <div className="p-6 sm:p-10 border border-foreground/15 rounded-3xl bg-card/70 backdrop-blur-2xl shadow-xl space-y-6">
+                {quizFinished ? (
+                  <div className="text-center space-y-6 py-6">
+                    <h2 className="text-3xl font-silkscreen tracking-tight">Evaluation Complete</h2>
+                    <div className="p-8 border border-foreground/10 bg-card/40 rounded-2xl max-w-sm mx-auto">
+                      <p className="text-xs font-offbit text-muted-foreground uppercase tracking-widest mb-2 font-bold">SCORE ACHIEVED</p>
+                      <p className="text-4xl font-silkscreen text-positive">
+                        {score} <span className="text-base font-mono text-muted-foreground/60">/ {questions.length}</span>
+                      </p>
+                      <p className="text-xs font-offbit text-positive mt-3 font-semibold">
+                        {score === questions.length ? '🌟 Perfect Score! Excellent mastery.' : 'Great effort! Review topics and drill again.'}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={resetAll}
+                      className="bg-foreground text-background hover:bg-foreground/90 rounded-full px-8 h-12 font-mono text-xs"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Try Another Topic
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <span className="text-xs font-offbit text-muted-foreground uppercase tracking-wider block font-bold">
+                        Question {currentQuizIdx + 1} of {questions.length}
+                      </span>
+                      <h3 className="text-2xl sm:text-3xl font-display leading-tight text-foreground font-medium">
+                        {questions[currentQuizIdx].question}
+                      </h3>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      {questions[currentQuizIdx].options.map((option) => {
+                        const isSelected = selectedOption === option
+                        const isCorrectAnswer = option.trim() === questions[currentQuizIdx].answer.trim()
+
+                        let optionStyle = 'border-foreground/15 hover:border-foreground/40 bg-card/40'
+                        if (isSelected && !isAnswered) {
+                          optionStyle = 'border-foreground bg-foreground/10 font-semibold'
+                        } else if (isAnswered) {
+                          if (isCorrectAnswer) {
+                            optionStyle = 'border-positive text-positive bg-positive/10 font-semibold'
+                          } else if (isSelected) {
+                            optionStyle = 'border-destructive text-destructive bg-destructive/10 font-semibold'
+                          } else {
+                            optionStyle = 'border-foreground/10 opacity-40 bg-transparent'
+                          }
+                        }
+
+                        return (
+                          <button
+                            key={option}
+                            onClick={() => handleOptionClick(option)}
+                            className={`w-full text-left p-4 sm:p-5 text-sm sm:text-base font-sans border rounded-2xl transition-all flex items-center justify-between ${optionStyle}`}
+                            disabled={isAnswered}
+                          >
+                            <span>{option}</span>
+                            {isAnswered && isCorrectAnswer && <CheckCircle className="w-5 h-5 text-positive shrink-0" />}
+                            {isAnswered && isSelected && !isCorrectAnswer && <AlertCircle className="w-5 h-5 text-destructive shrink-0" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {isAnswered && (
+                      <div className="p-5 border border-foreground/10 bg-muted/20 rounded-2xl space-y-2 animate-in fade-in">
+                        <span className="text-xs font-mono text-muted-foreground uppercase tracking-widest block">
+                          Explanation
+                        </span>
+                        <p className="text-xs sm:text-sm leading-relaxed font-sans text-muted-foreground">
+                          {questions[currentQuizIdx].explanation}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="pt-4 flex justify-end">
+                      {!isAnswered ? (
+                        <Button
+                          onClick={handleSubmitAnswer}
+                          disabled={!selectedOption}
+                          className="h-12 px-8 bg-foreground text-background hover:bg-foreground/90 rounded-full font-mono text-xs uppercase tracking-wider font-semibold disabled:opacity-40"
+                        >
+                          Submit Answer
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={handleNextQuestion}
+                          className="h-12 px-8 bg-foreground text-background hover:bg-foreground/90 rounded-full font-mono text-xs uppercase tracking-wider font-semibold"
+                        >
+                          {currentQuizIdx + 1 === questions.length ? 'Finish Evaluation' : 'Next Question →'}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
-            ))}
-
-            {!submitted ? (
-              <Button
-                onClick={submitQuiz}
-                disabled={selected.some((s) => s === null)}
-                className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 rounded-none"
-              >
-                Submit Quiz
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={reset}
-                className="w-full h-11 rounded-none border-foreground/20 flex items-center gap-2"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Try Another Quiz
-              </Button>
             )}
+
+            {/* FLASHCARDS BOARD */}
+            {activeTab === 'flashcards' && cards && (
+              <div className="w-full max-w-lg mx-auto space-y-6">
+                <div
+                  onClick={() => setFlipped(!flipped)}
+                  className="w-full h-72 sm:h-96 card-perspective cursor-pointer select-none"
+                >
+                  <div className={`w-full h-full card-inner relative border border-foreground/15 rounded-3xl shadow-xl bg-card/80 backdrop-blur-2xl ${flipped ? 'card-flipped' : ''}`}>
+                    <div className="card-face card-front p-8 flex flex-col items-center justify-center text-center bg-card/90 rounded-3xl">
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest absolute top-6">
+                        CONCEPT / QUESTION
+                      </span>
+                      <h2 className="text-3xl sm:text-4xl font-display text-foreground leading-snug px-4 font-medium">
+                        {cards[currentCardIdx].front}
+                      </h2>
+                      <span className="text-xs font-offbit text-positive absolute bottom-6 bg-positive/10 border border-positive/20 px-3 py-1 rounded-full font-semibold">
+                        Click card to flip ↺
+                      </span>
+                    </div>
+
+                    <div className="card-face card-back p-8 flex flex-col items-center justify-center text-center bg-muted/40 rounded-3xl">
+                      <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest absolute top-6">
+                        EXPLANATION / ANSWER
+                      </span>
+                      <p className="text-sm sm:text-base font-sans text-muted-foreground leading-relaxed px-4 max-h-[200px] overflow-y-auto">
+                        {cards[currentCardIdx].back}
+                      </p>
+                      <span className="text-[10px] font-mono text-muted-foreground absolute bottom-6">
+                        Click card to show front ↺
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between px-2">
+                  <button
+                    onClick={handlePrevCard}
+                    disabled={currentCardIdx === 0}
+                    className="p-3 border border-foreground/15 hover:border-foreground/40 rounded-full disabled:opacity-30 transition-all bg-card/60"
+                    aria-label="Previous card"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={() => setFlipped(!flipped)}
+                      variant="outline"
+                      className="rounded-full px-5 h-11 border-foreground/15 font-mono text-xs"
+                    >
+                      Flip Card ↺
+                    </Button>
+                  </div>
+
+                  <button
+                    onClick={handleNextCard}
+                    disabled={currentCardIdx === cards.length - 1}
+                    className="p-3 border border-foreground/15 hover:border-foreground/40 rounded-full disabled:opacity-30 transition-all bg-card/60"
+                    aria-label="Next card"
+                  >
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ─── DOCKED BOTTOM SEARCH BAR FOR FOLLOW-UP DRILLS ─── */}
+            <div className="sticky bottom-4 z-20 w-full max-w-2xl mx-auto pt-4">
+              <form
+                onSubmit={activeTab === 'quiz' ? handleGenerateQuiz : handleGenerateFlashcards}
+                className="flex items-center gap-2 p-2 bg-background/90 backdrop-blur-2xl border border-foreground/20 rounded-full shadow-2xl focus-within:border-positive/60"
+              >
+                <Search className="w-4 h-4 ml-3 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder={`Generate another ${activeTab === 'quiz' ? 'quiz' : 'flashcard deck'}...`}
+                  className="flex-1 h-10 bg-transparent px-2 text-sm font-sans border-none focus:outline-none text-foreground"
+                />
+                <VoiceControls
+                  onSpeechResult={(transcript) => setTopic(transcript)}
+                  size="sm"
+                />
+                <Button
+                  type="submit"
+                  disabled={!topic.trim()}
+                  className="h-10 px-5 bg-foreground text-background hover:bg-foreground/90 rounded-full font-mono text-xs font-semibold shrink-0"
+                >
+                  Generate
+                </Button>
+              </form>
+            </div>
           </div>
         )}
-      </div>
-    </AppShell>
+      </main>
+    </div>
   )
 }

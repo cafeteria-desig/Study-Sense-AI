@@ -1,169 +1,74 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
-import { Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { SignUp } from '@clerk/clerk-react'
+import { dark } from '@clerk/themes'
 
 export function RegisterPage() {
-  const { signUp } = useAuth()
-  const navigate = useNavigate()
-  const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    const { error } = await signUp(email, password, fullName)
-    setLoading(false)
-    if (error) {
-      setError(error.message)
-    } else {
-      setSuccess(true)
-      setTimeout(() => navigate('/dashboard'), 1500)
-    }
-  }
-
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 md:px-6">
+    <div className="min-h-screen w-full bg-[#08080a] text-[#F4F2EC] flex flex-col items-center justify-center px-4 py-8 relative font-sans overflow-y-auto select-none">
+      {/* Ambient background glow */}
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-cyan-500/10 blur-[150px] rounded-full pointer-events-none" />
+
+      {/* Top back navigation */}
       <Link
         to="/"
-        className="absolute top-8 left-8 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors"
+        className="fixed top-6 left-6 text-xs font-mono text-[#A6A49C] hover:text-[#F4F2EC] transition-colors flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md z-30"
       >
-        ← StudySense AI
+        ← Back to StudySense AI
       </Link>
 
-      <div className="w-full max-w-md">
-        <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-8">
-          <span className="w-8 h-px bg-foreground/30" />
-          Get started
-        </span>
-
-        <h1 className="text-4xl font-display tracking-tight mb-2">Create your account</h1>
-        <p className="text-muted-foreground mb-10 font-mono text-sm">
-          Free plan · No credit card · Cancel any time.
-        </p>
-
-        <div className="border border-foreground/10 p-6 md:p-8">
-          {success ? (
-            <div className="text-center py-8">
-              <p className="text-2xl font-display mb-3">You&apos;re in.</p>
-              <p className="text-sm font-mono text-muted-foreground">
-                Redirecting to your dashboard…
-              </p>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Full name */}
-              <div className="space-y-2">
-                <label htmlFor="reg-name" className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                  Full name
-                </label>
-                <input
-                  id="reg-name"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  placeholder="Ada Lovelace"
-                  className="w-full h-11 bg-input px-4 text-sm font-mono border border-border focus:border-foreground focus:outline-none transition-colors placeholder:text-muted-foreground/50"
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-2">
-                <label htmlFor="reg-email" className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                  Email address
-                </label>
-                <input
-                  id="reg-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  placeholder="you@example.com"
-                  className="w-full h-11 bg-input px-4 text-sm font-mono border border-border focus:border-foreground focus:outline-none transition-colors placeholder:text-muted-foreground/50"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label htmlFor="reg-password" className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                  Password <span className="normal-case">(min 8 chars)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    id="reg-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="w-full h-11 bg-input px-4 pr-12 text-sm font-mono border border-border focus:border-foreground focus:outline-none transition-colors placeholder:text-muted-foreground/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    aria-label="Toggle password visibility"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {error && (
-                <p className="text-sm font-mono text-destructive bg-destructive/5 border border-destructive/20 px-4 py-3">
-                  {error}
-                </p>
-              )}
-
-              <Button
-                id="register-submit"
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 bg-foreground hover:bg-foreground/90 text-background rounded-none text-sm group"
-              >
-                {loading ? (
-                  <span className="font-mono text-xs">Creating account…</span>
-                ) : (
-                  <>
-                    Create free account
-                    <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </Button>
-
-              <p className="text-xs text-muted-foreground font-mono text-center leading-relaxed">
-                By creating an account you agree to our{' '}
-                <a href="#" className="underline underline-offset-4 hover:text-foreground">Terms</a>{' '}
-                and{' '}
-                <a href="#" className="underline underline-offset-4 hover:text-foreground">Privacy Policy</a>.
-              </p>
-            </form>
-          )}
-
-          {!success && (
-            <div className="mt-8 pt-8 border-t border-foreground/10">
-              <p className="text-sm text-muted-foreground font-mono text-center">
-                Already have an account?{' '}
-                <Link to="/login" className="text-foreground hover:underline underline-offset-4">
-                  Sign in
-                </Link>
-              </p>
-            </div>
-          )}
+      {/* Centered Auth Card Container */}
+      <div className="w-full max-w-[460px] flex flex-col items-center justify-center relative z-10 my-auto pt-10 sm:pt-0">
+        {/* Sleek Mode Switcher Pill */}
+        <div className="flex items-center gap-1 mb-4 p-1 border border-white/15 bg-white/5 backdrop-blur-xl rounded-full text-xs font-mono shadow-lg">
+          <Link
+            to="/login"
+            className="px-5 py-1.5 rounded-full text-[#A6A49C] hover:text-[#F4F2EC] font-medium transition-all"
+          >
+            Sign In
+          </Link>
+          <Link
+            to="/register"
+            className="px-5 py-1.5 rounded-full bg-[#F4F2EC] text-[#08080a] font-bold shadow-md transition-all"
+          >
+            Sign Up
+          </Link>
         </div>
+
+        {/* Perfectly Centered Sign Up Box with scroll safety */}
+        <SignUp
+          path="/register"
+          routing="path"
+          signInUrl="/login"
+          fallbackRedirectUrl="/dashboard"
+          appearance={{
+            baseTheme: dark,
+            layout: {
+              socialButtonsVariant: 'blockButton',
+            },
+            elements: {
+              rootBox: 'w-full flex justify-center items-center',
+              cardBox: 'w-full',
+              card: 'bg-white/[0.03] border border-white/15 backdrop-blur-2xl shadow-[0_0_60px_rgba(0,0,0,0.8)] rounded-3xl p-5 sm:p-7 w-full my-auto max-h-[82vh] overflow-y-auto',
+              headerTitle: 'text-white font-serif text-2xl tracking-tight text-center',
+              headerSubtitle: 'text-[#A6A49C] font-mono text-xs text-center',
+              socialButtonsBlockButton: 'bg-white/5 border border-white/15 text-[#F4F2EC] hover:bg-white/10 font-mono text-xs rounded-xl h-10 transition-all',
+              socialButtonsBlockButtonText: 'text-[#F4F2EC] font-mono text-xs font-medium',
+              dividerLine: 'bg-white/10',
+              dividerText: 'text-[#726F68] font-mono text-[11px] uppercase tracking-widest',
+              formFieldLabel: 'text-[#A6A49C] font-mono text-[11px] uppercase tracking-wider font-medium',
+              formFieldInput: 'bg-white/[0.05] border-white/15 text-white font-mono text-sm focus:border-white focus:ring-1 focus:ring-white/40 rounded-xl h-10 placeholder:text-white/20 transition-all',
+              formButtonPrimary: 'bg-[#F4F2EC] hover:bg-white text-[#08080a] font-mono text-sm font-semibold rounded-xl h-11 transition-all shadow-md mt-2',
+              footerActionText: 'text-[#A6A49C] font-mono text-xs',
+              footerActionLink: 'text-white font-mono text-xs font-semibold underline underline-offset-4 hover:text-[#F4F2EC]',
+              footer: '!hidden',
+              footerPages: '!hidden',
+              devModeBadge: '!hidden',
+            }
+          }}
+        />
       </div>
     </div>
   )
 }
+
+export default RegisterPage

@@ -1,163 +1,234 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
-import { AnimatedSphere } from './AnimatedSphere'
+import { Eyebrow } from '@/components/ui/Eyebrow'
+import { ArrowRight, LayoutDashboard } from 'lucide-react'
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  AnimatePresence,
+  useReducedMotion,
+} from 'framer-motion'
+import { useState } from 'react'
 
 const words = ['learn', 'revise', 'master', 'ace']
 
-const stats = [
-  { value: '10x', label: 'faster revision', source: 'STUDENTS' },
-  { value: '94%', label: 'exam pass rate', source: 'STUDYSENSE' },
-  { value: '500k+', label: 'notes generated', source: 'PLATFORM' },
-  { value: '3 min', label: 'to first quiz', source: 'ONBOARDING' },
-]
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 28 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.7, ease: [0.16, 1, 0.3, 1] as const },
+  },
+}
+
+const charVariants = {
+  hidden: { opacity: 0, y: 20, rotateX: -40 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    rotateX: 0,
+    transition: { delay: i * 0.04, duration: 0.4, ease: [0.16, 1, 0.3, 1] as const },
+  }),
+  exit: (i: number) => ({
+    opacity: 0,
+    y: -16,
+    transition: { delay: i * 0.02, duration: 0.25, ease: [0.4, 0, 1, 1] as const },
+  }),
+}
 
 export function HeroSection() {
-  const [isVisible, setIsVisible] = useState(false)
+  const { user } = useAuth()
   const [wordIndex, setWordIndex] = useState(0)
+  const shouldReduceMotion = useReducedMotion()
+  const btnRef = useRef<HTMLAnchorElement>(null)
 
-  useEffect(() => {
-    setIsVisible(true)
-  }, [])
+  // Magnetic button effect
+  const mx = useMotionValue(0)
+  const my = useMotionValue(0)
+  const springX = useSpring(mx, { stiffness: 200, damping: 20 })
+  const springY = useSpring(my, { stiffness: 200, damping: 20 })
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (shouldReduceMotion || !btnRef.current) return
+    const rect = btnRef.current.getBoundingClientRect()
+    const dx = e.clientX - (rect.left + rect.width / 2)
+    const dy = e.clientY - (rect.top + rect.height / 2)
+    mx.set(dx * 0.25)
+    my.set(dy * 0.25)
+  }
+  const handleMouseLeave = () => { mx.set(0); my.set(0) }
 
   useEffect(() => {
     const interval = setInterval(() => {
       setWordIndex((prev) => (prev + 1) % words.length)
-    }, 2500)
+    }, 2200)
     return () => clearInterval(interval)
   }, [])
 
+  const currentWord = words[wordIndex]
+
   return (
-    <section className="relative min-h-screen flex flex-col justify-center overflow-hidden noise-overlay">
-      {/* Animated sphere */}
-      <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] lg:w-[700px] lg:h-[700px] opacity-40">
-        <AnimatedSphere />
-      </div>
-
-      {/* Grid-line overlay */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={`h-${i}`}
-            className="absolute h-px bg-foreground/10"
-            style={{ top: `${12.5 * (i + 1)}%`, left: 0, right: 0 }}
+    <section
+      id="hero"
+      className="relative min-h-[90vh] flex flex-col justify-center pt-36 pb-28 lg:pt-44 lg:pb-36 overflow-hidden"
+    >
+      {/* Ambient glow orbs */}
+      {!shouldReduceMotion && (
+        <>
+          <motion.div
+            className="pointer-events-none absolute -top-24 -left-24 w-[480px] h-[480px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(140,255,180,0.08) 0%, transparent 70%)',
+            }}
+            animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+            transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
           />
-        ))}
-        {[...Array(12)].map((_, i) => (
-          <div
-            key={`v-${i}`}
-            className="absolute w-px bg-foreground/10"
-            style={{ left: `${8.33 * (i + 1)}%`, top: 0, bottom: 0 }}
+          <motion.div
+            className="pointer-events-none absolute bottom-0 right-0 w-[360px] h-[360px] rounded-full"
+            style={{
+              background: 'radial-gradient(circle, rgba(124,58,237,0.1) 0%, transparent 70%)',
+            }}
+            animate={{ x: [0, -20, 0], y: [0, 20, 0] }}
+            transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
           />
-        ))}
-      </div>
+        </>
+      )}
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12 py-32 lg:py-40 pointer-events-none">
-        {/* Eyebrow */}
-        <div
-          className={`mb-8 transition-all duration-700 pointer-events-auto ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-          }`}
+      <div className="max-w-[1300px] mx-auto px-6 lg:px-10 w-full z-10">
+        <motion.div
+          className="max-w-3xl space-y-9"
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
         >
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground">
-            <span className="w-8 h-px bg-foreground/30" />
-            THE AI STUDY COMPANION
-          </span>
-        </div>
+          {/* Eyebrow */}
+          <motion.div variants={itemVariants}>
+            <Eyebrow>THE AI STUDY COMPANION</Eyebrow>
+          </motion.div>
 
-        {/* Hero Headline */}
-        <div className="mb-12 pointer-events-auto">
-          <h1
-            className={`transition-all duration-1000 ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-            }`}
-          >
-            <span className="block text-[clamp(2.5rem,8vw,5.5rem)] lg:text-7xl font-semibold text-foreground tracking-tight mb-4">
-              The smarter way to
-            </span>
-            <span className="block text-[clamp(3.5rem,14vw,11rem)] font-display leading-[0.9] tracking-tight text-foreground font-semibold">
-              <span className="relative inline-block">
-                <span key={wordIndex} className="inline-flex overflow-hidden whitespace-nowrap">
-                  {words[wordIndex].split('').map((char, i) => (
-                    <span
-                      key={`${wordIndex}-${i}`}
-                      className="inline-block animate-char-in"
-                      style={{ animationDelay: `${i * 50}ms` }}
-                    >
-                      {char}
-                    </span>
-                  ))}
+          {/* Headline */}
+          <motion.div variants={itemVariants}>
+            <h1 className="text-5xl sm:text-7xl lg:text-8xl font-serif-italic text-[#F4F2EC] leading-[1.1] tracking-tight">
+              <span className="block">The smarter way</span>
+              <span className="block mt-2">
+                to{' '}
+                <span className="relative inline-flex items-center overflow-visible pr-6 pb-2">
+                  <span className="inline-flex font-offbit font-bold uppercase text-[#8CFFB4] tracking-wider overflow-visible pr-4 py-1" style={{ perspective: 600 }}>
+                    <AnimatePresence mode="wait">
+                      <motion.span key={wordIndex} className="inline-flex">
+                        {currentWord.split('').map((char, i) => (
+                          <motion.span
+                            key={`${wordIndex}-${i}`}
+                            className="inline-block"
+                            custom={i}
+                            variants={charVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                          >
+                            {char}
+                          </motion.span>
+                        ))}
+                      </motion.span>
+                    </AnimatePresence>
+                  </span>
+                  <motion.span
+                    className="absolute bottom-0 left-0 right-2 h-1.5 bg-[#8CFFB4] shadow-[0_0_15px_#8CFFB4] rounded-full origin-left"
+                    initial={{ scaleX: 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: 0.9, delay: 0.6, ease: [0.16, 1, 0.3, 1] as const }}
+                  />
                 </span>
-                <span className="absolute -bottom-2 left-0 right-0 h-3 bg-foreground/10" />
               </span>
-            </span>
-          </h1>
-        </div>
+            </h1>
+          </motion.div>
 
-        {/* Description + CTAs */}
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-24 items-end pointer-events-auto">
-          <p
-            className={`text-xl lg:text-2xl text-muted-foreground leading-relaxed max-w-xl transition-all duration-700 delay-200 ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
+          {/* Paragraph */}
+          <motion.p
+            className="text-lg sm:text-xl lg:text-2xl text-[#A6A49C] leading-relaxed max-w-xl font-normal"
+            variants={itemVariants}
           >
-            Upload a topic, PDF, or textbook chapter. StudySense generates
-            notes, quizzes, flashcards, and a personalised revision schedule—
-            instantly.
-          </p>
+            Upload a topic, PDF, or textbook chapter. Our AI companion Nora will do the rest — generating notes, quizzes, flashcards, and oral drills instantly.
+          </motion.p>
 
-          <div
-            className={`flex flex-col sm:flex-row items-start gap-4 transition-all duration-700 delay-300 ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
+          {/* CTAs */}
+          <motion.div
+            className="flex flex-wrap items-center gap-3 pt-3"
+            variants={itemVariants}
           >
-            <Button
-              size="lg"
-              className="bg-foreground hover:bg-foreground/90 text-background px-8 h-14 text-base rounded-full group"
-              asChild
-            >
-              <Link to="/register">
-                Start Learning Free
-                <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-14 px-8 text-base rounded-full border-foreground/20 hover:bg-foreground/5"
-              asChild
-            >
-              <a href="#how-it-works">See How It Works</a>
-            </Button>
-          </div>
-        </div>
-      </div>
+            {user ? (
+              <motion.div
+                style={{ x: springX, y: springY }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+              >
+                <Button
+                  size="lg"
+                  className="bg-[#F4F2EC] hover:bg-[#F4F2EC]/90 text-[#08080a] font-offbit text-sm font-bold uppercase tracking-wider px-9 h-13 rounded-full group shadow-xl transition-colors flex items-center gap-2"
+                  asChild
+                >
+                  <Link to="/dashboard" ref={btnRef}>
+                    <LayoutDashboard className="w-5 h-5 text-[#08080a]" />
+                    Open Dashboard
+                    <motion.span
+                      className="inline-flex"
+                      animate={{ x: [0, 3, 0] }}
+                      transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                    >
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </motion.span>
+                  </Link>
+                </Button>
+              </motion.div>
+            ) : (
+              <>
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    size="lg"
+                    className="bg-[#F4F2EC] hover:bg-[#F4F2EC]/90 text-[#08080a] font-offbit text-sm font-bold uppercase tracking-wider px-9 h-13 rounded-full shadow-xl transition-colors"
+                    asChild
+                  >
+                    <Link to="/register">
+                      Get Started Free
+                      <motion.span
+                        className="inline-flex ml-2"
+                        animate={{ x: [0, 3, 0] }}
+                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                      >
+                        <ArrowRight className="w-4 h-4" />
+                      </motion.span>
+                    </Link>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                  <Button
+                    size="lg"
+                    className="bg-transparent border border-[#F4F2EC]/30 hover:border-[#F4F2EC]/70 text-[#F4F2EC] font-offbit text-sm font-bold uppercase tracking-wider px-9 h-13 rounded-full shadow-xl transition-colors"
+                    asChild
+                  >
+                    <Link to="/login">
+                      Sign In
+                    </Link>
+                  </Button>
+                </motion.div>
+              </>
+            )}
+          </motion.div>
 
-      {/* Stats Marquee */}
-      <div
-        className={`absolute bottom-20 left-0 right-0 pointer-events-none transition-all duration-700 delay-500 ${
-          isVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div className="flex gap-16 marquee whitespace-nowrap">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="flex gap-16 shrink-0">
-                {stats.map((stat) => (
-                  <div key={`${stat.source}-${i}`} className="flex items-baseline gap-4">
-                    <span className="text-4xl lg:text-5xl font-display">{stat.value}</span>
-                    <span className="text-sm text-muted-foreground">
-                      {stat.label}
-                      <span className="block font-mono text-xs mt-1">{stat.source}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   )
 }
+
+export default HeroSection

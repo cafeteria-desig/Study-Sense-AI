@@ -1,50 +1,60 @@
-import { useState, useEffect } from 'react'
-import { AppShell } from '@/components/AppShell'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/services/supabaseClient'
-import { useNavigate } from 'react-router-dom'
-import { Check, Moon, Sun, LogOut, Loader2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { ArrowLeft, Shield, User, Check, Sparkles, Clock, Play, RotateCcw } from 'lucide-react'
+
+const SPLASH_LAST_SHOWN_KEY = 'studysense_splash_last_shown'
+const SPLASH_MODE_KEY = 'studysense_splash_mode'
 
 export function SettingsPage() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, updateUsername } = useAuth()
   const navigate = useNavigate()
-  const [fullName, setFullName] = useState(user?.user_metadata?.full_name ?? '')
+
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || '')
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [dark, setDark] = useState(false)
+  const [savedSuccess, setSavedSuccess] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  useEffect(() => {
-    setDark(document.documentElement.classList.contains('dark'))
-  }, [])
+  // Landing page splash mode settings
+  const [splashMode, setSplashMode] = useState<string>(() => {
+    return localStorage.getItem(SPLASH_MODE_KEY) || '15min'
+  })
+  const [splashResetMsg, setSplashResetMsg] = useState(false)
 
-  const toggleTheme = () => {
-    const next = !dark
-    setDark(next)
-    document.documentElement.classList.toggle('dark', next)
-    localStorage.setItem('theme', next ? 'dark' : 'light')
-    toast.success(`Theme switched to ${next ? 'dark' : 'light'} mode!`)
+  const handleSplashModeChange = (mode: string) => {
+    setSplashMode(mode)
+    try {
+      localStorage.setItem(SPLASH_MODE_KEY, mode)
+    } catch (e) {}
   }
 
-  const saveProfile = async () => {
-    if (saving) return
+  const handleResetSplashTimer = () => {
+    try {
+      localStorage.removeItem(SPLASH_LAST_SHOWN_KEY)
+      setSplashResetMsg(true)
+      setTimeout(() => setSplashResetMsg(false), 3000)
+    } catch (e) {}
+  }
+
+  const handleSaveName = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!fullName.trim()) {
+      setErrorMsg('Name cannot be empty')
+      return
+    }
+    setErrorMsg('')
     setSaving(true)
-    setError(null)
-    const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } })
+    const { error } = await updateUsername(fullName.trim())
     setSaving(false)
+
     if (error) {
-      setError(error.message)
-      toast.error('Failed to update profile: ' + error.message)
+      setErrorMsg(error.message || 'Failed to update username')
     } else {
-      setSaved(true)
-      toast.success('Profile updated successfully!')
-      setTimeout(() => setSaved(false), 2500)
+      setSavedSuccess(true)
+      setTimeout(() => setSavedSuccess(false), 3000)
     }
   }
-
-
 
   const handleSignOut = async () => {
     await signOut()
@@ -52,110 +62,206 @@ export function SettingsPage() {
   }
 
   return (
-    <AppShell>
-      <div className="max-w-xl mx-auto px-4 md:px-6 py-6 md:py-10">
+    <div className="min-h-screen bg-background text-foreground selection:bg-positive/20">
+      <main className="max-w-2xl mx-auto px-6 py-20">
+        {/* Back navigation */}
+        <Link
+          to="/dashboard"
+          className="inline-flex items-center gap-2 text-sm font-mono text-muted-foreground hover:text-foreground mb-12 transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Back to Dashboard
+        </Link>
+
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-12">
           <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
             <span className="w-8 h-px bg-foreground/30" />
-            Settings
+            PREFERENCES & ACCOUNT
           </span>
-          <h1 className="text-4xl font-display tracking-tight">Account Settings</h1>
-          <p className="text-muted-foreground font-mono text-sm mt-2">Manage your profile and preferences.</p>
+          <h1 className="text-4xl lg:text-5xl font-display tracking-tight">Settings</h1>
         </div>
 
-        {/* Profile */}
-        <section className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-5">
-          <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground">Profile</h2>
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              Full Name
-            </label>
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && saveProfile()}
-              className="w-full h-11 bg-input px-4 text-sm font-mono border border-border focus:border-foreground focus:outline-none transition-colors"
-            />
+        {/* Sections list with hairline dividers */}
+        <div className="space-y-12">
+          {/* Section 1: User Profile & Name Change */}
+          <div className="pt-8 border-t border-foreground/10 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-display font-medium flex items-center gap-2">
+                  <User className="w-5 h-5 text-positive" />
+                  Account Identity
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Change your display username across StudySense and Nora AI.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveName} className="space-y-4 pt-2">
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                  Full Name / Username
+                </label>
+                <div className="flex gap-3 flex-col sm:flex-row">
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="flex-1 bg-card/40 border border-foreground/15 rounded-2xl px-4 py-3 text-sm text-foreground focus:outline-none focus:border-positive/50 transition-colors backdrop-blur-md"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={saving || !fullName.trim()}
+                    className="bg-foreground text-background hover:bg-foreground/90 rounded-2xl px-6 h-11 font-mono text-xs font-semibold shrink-0"
+                  >
+                    {saving ? (
+                      'Saving...'
+                    ) : savedSuccess ? (
+                      <>
+                        <Check className="w-4 h-4 mr-1.5 text-positive" />
+                        Saved!
+                      </>
+                    ) : (
+                      'Update Name'
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {errorMsg && (
+                <p className="text-xs font-mono text-destructive">{errorMsg}</p>
+              )}
+
+              {savedSuccess && (
+                <div className="inline-flex items-center gap-2 text-xs font-mono text-positive bg-positive/10 border border-positive/20 px-3 py-1.5 rounded-full animate-in fade-in">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Username updated successfully! Dashboard greeting updated.
+                </div>
+              )}
+
+              <div className="grid grid-cols-3 py-3 border-b border-foreground/5 font-mono text-xs">
+                <span className="text-muted-foreground">Registered Email:</span>
+                <span className="col-span-2 text-foreground font-mono">{user?.email}</span>
+              </div>
+            </form>
           </div>
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-              Email Address
-            </label>
-            <input
-              value={user?.email ?? ''}
-              disabled
-              className="w-full h-11 bg-input px-4 text-sm font-mono border border-border text-muted-foreground cursor-not-allowed opacity-50"
-            />
-            <p className="text-xs font-mono text-muted-foreground/60">Email cannot be changed here.</p>
-          </div>
-          {error && (
-            <p className="text-sm font-mono text-destructive bg-destructive/5 border border-destructive/20 px-4 py-3">
-              {error}
+
+          {/* Section 2: Text Scrambler Splash Preferences */}
+          <div className="pt-8 border-t border-foreground/10 space-y-4">
+            <h2 className="text-xl font-display font-medium flex items-center gap-2">
+              <Clock className="w-5 h-5 text-amber-400" />
+              Landing Page Scrambler Intro
+            </h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Control how frequently the Text Scrambler intro splash screen plays when visiting or refreshing the front page.
             </p>
-          )}
-          <Button
-            onClick={saveProfile}
-            disabled={saving}
-            className="h-11 px-6 bg-foreground text-background hover:bg-foreground/90 rounded-none"
-          >
-            {saving ? (
-              <span className="flex items-center gap-2 font-mono text-xs">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving…
-              </span>
-            ) : saved ? (
-              <span className="flex items-center gap-2">
-                <Check className="w-4 h-4" />
-                Saved!
-              </span>
-            ) : (
-              'Save Changes'
-            )}
-          </Button>
-        </section>
 
-        {/* Appearance */}
-        <section className="border border-foreground/10 p-4 md:p-6 mb-5">
-          <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-5">Appearance</h2>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-mono text-sm">Theme</p>
-              <p className="font-mono text-xs text-muted-foreground mt-0.5">
-                Currently: {dark ? 'Dark mode' : 'Light mode'}
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => handleSplashModeChange('15min')}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  splashMode === '15min'
+                    ? 'border-positive bg-positive/10 text-foreground font-semibold shadow-md'
+                    : 'border-foreground/15 bg-card/30 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <div className="font-mono text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" />
+                  15-Min Timer
+                </div>
+                <p className="text-xs font-mono opacity-80 font-normal">
+                  Plays once every 15 minutes. Skipped on frequent refreshes.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSplashModeChange('always')}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  splashMode === 'always'
+                    ? 'border-positive bg-positive/10 text-foreground font-semibold shadow-md'
+                    : 'border-foreground/15 bg-card/30 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <div className="font-mono text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Play className="w-3.5 h-3.5 text-cyan-400" />
+                  Every Visit
+                </div>
+                <p className="text-xs font-mono opacity-80 font-normal">
+                  Always play text scrambler on every refresh or visit.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSplashModeChange('never')}
+                className={`p-4 rounded-2xl border text-left transition-all ${
+                  splashMode === 'never'
+                    ? 'border-positive bg-positive/10 text-foreground font-semibold shadow-md'
+                    : 'border-foreground/15 bg-card/30 text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <div className="font-mono text-xs uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <RotateCcw className="w-3.5 h-3.5 text-rose-400" />
+                  Never
+                </div>
+                <p className="text-xs font-mono opacity-80 font-normal">
+                  Always skip text scrambler and go straight to landing page.
+                </p>
+              </button>
             </div>
-            <button
-              onClick={toggleTheme}
-              className="w-11 h-11 border border-foreground/20 flex items-center justify-center hover:bg-foreground/5 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {dark
-                ? <Sun className="w-4 h-4" strokeWidth={1.5} />
-                : <Moon className="w-4 h-4" strokeWidth={1.5} />
-              }
-            </button>
+
+            <div className="pt-2 flex items-center justify-between">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleResetSplashTimer}
+                className="rounded-2xl border-foreground/15 font-mono text-xs h-9 px-4 hover:bg-muted/50"
+              >
+                <RotateCcw className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+                Reset Timer Now
+              </Button>
+              {splashResetMsg && (
+                <span className="text-xs font-mono text-positive animate-in fade-in">
+                  Timer reset! Scrambler will play on next visit.
+                </span>
+              )}
+            </div>
           </div>
-        </section>
 
-        {/* Account */}
-        <section className="border border-foreground/10 p-4 md:p-6">
-          <h2 className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-5">Account</h2>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-              <span>Signed in as</span>
-              <span className="text-foreground">{user?.email}</span>
+          {/* Section 3: AI Provider & Engine */}
+          <div className="pt-8 border-t border-foreground/10">
+            <h2 className="text-lg font-sans font-medium mb-4">AI Model Status</h2>
+            <div className="flex items-start gap-4 p-5 bg-card/40 border border-foreground/10 rounded-2xl backdrop-blur-md">
+              <Shield className="w-5 h-5 mt-0.5 text-positive" />
+              <div>
+                <p className="font-mono text-xs font-semibold uppercase tracking-wide text-foreground">
+                  AI Engine Status: Active & Operational
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                  The application is configured to route all tutor, quiz, study plan, and notes generation tasks through the secure backend AI proxy.
+                </p>
+              </div>
             </div>
-            <button
+          </div>
+
+          {/* Section 4: Account Actions */}
+          <div className="pt-8 border-t border-foreground/10">
+            <Button
               onClick={handleSignOut}
-              className="flex items-center gap-2 text-sm font-mono text-muted-foreground hover:text-foreground transition-colors border border-foreground/20 px-4 py-2.5 hover:border-foreground/40"
+              variant="outline"
+              className="rounded-2xl border-destructive/30 text-destructive hover:bg-destructive/5 hover:text-destructive px-6 h-11 text-xs font-mono"
             >
-              <LogOut className="w-4 h-4" strokeWidth={1.5} />
-              Sign out of StudySense
-            </button>
+              Sign out of account
+            </Button>
           </div>
-        </section>
-      </div>
-    </AppShell>
+        </div>
+      </main>
+    </div>
   )
 }
+
+export default SettingsPage

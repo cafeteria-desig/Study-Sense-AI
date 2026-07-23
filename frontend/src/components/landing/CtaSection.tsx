@@ -1,141 +1,139 @@
-import { useEffect, useRef, useState } from 'react'
+import { ArrowRight, LayoutDashboard, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
-
-function AnimatedTetrahedron() {
-  return (
-    <svg viewBox="0 0 300 300" className="w-full h-full text-foreground">
-      {/* Outer tetrahedron edges */}
-      <line x1="150" y1="30" x2="270" y2="240" stroke="currentColor" strokeWidth="1" opacity="0.3">
-        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" repeatCount="indefinite" />
-      </line>
-      <line x1="150" y1="30" x2="30" y2="240" stroke="currentColor" strokeWidth="1" opacity="0.3">
-        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" begin="0.5s" repeatCount="indefinite" />
-      </line>
-      <line x1="30" y1="240" x2="270" y2="240" stroke="currentColor" strokeWidth="1" opacity="0.3">
-        <animate attributeName="opacity" values="0.3;0.8;0.3" dur="3s" begin="1s" repeatCount="indefinite" />
-      </line>
-      {/* Inner lines (depth) */}
-      <line x1="150" y1="30" x2="150" y2="240" stroke="currentColor" strokeWidth="1" opacity="0.15">
-        <animate attributeName="opacity" values="0.15;0.4;0.15" dur="2s" repeatCount="indefinite" />
-      </line>
-      <line x1="30" y1="240" x2="210" y2="135" stroke="currentColor" strokeWidth="1" opacity="0.15">
-        <animate attributeName="opacity" values="0.15;0.4;0.15" dur="2s" begin="0.7s" repeatCount="indefinite" />
-      </line>
-      <line x1="270" y1="240" x2="90" y2="135" stroke="currentColor" strokeWidth="1" opacity="0.15">
-        <animate attributeName="opacity" values="0.15;0.4;0.15" dur="2s" begin="1.4s" repeatCount="indefinite" />
-      </line>
-      {/* Vertices */}
-      {[{x:150,y:30},{x:30,y:240},{x:270,y:240},{x:150,y:170}].map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r="4" fill="currentColor" opacity="0.6">
-          <animate attributeName="r" values="4;7;4" dur="2s" begin={`${i*0.5}s`} repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0.6;1;0.6" dur="2s" begin={`${i*0.5}s`} repeatCount="indefinite" />
-        </circle>
-      ))}
-      {/* Orbiting dot */}
-      <circle r="3" fill="currentColor" opacity="0.8">
-        <animateMotion dur="4s" repeatCount="indefinite">
-          <mpath href="#tetraPath" />
-        </animateMotion>
-      </circle>
-      <path id="tetraPath" d="M 150 30 L 270 240 L 30 240 Z" fill="none" />
-    </svg>
-  )
-}
+import { motion, useInView, useReducedMotion } from 'framer-motion'
+import { useRef } from 'react'
 
 export function CtaSection() {
-  const [isVisible, setIsVisible] = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 50, y: 50 })
-  const sectionRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setIsVisible(true) },
-      { threshold: 0.2 }
-    )
-    if (sectionRef.current) observer.observe(sectionRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    setMousePos({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    })
-  }
+  const { user } = useAuth()
+  const ref = useRef(null)
+  const inView = useInView(ref, { once: true, margin: '-100px' })
+  const shouldReduceMotion = useReducedMotion()
 
   return (
-    <section ref={sectionRef} className="relative py-24 lg:py-32 overflow-hidden">
-      <div className="max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div
-          className={`relative border border-foreground transition-all duration-1000 ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
-          }`}
-          onMouseMove={handleMouseMove}
-        >
-          {/* Mouse spotlight */}
-          <div
-            className="absolute inset-0 opacity-10 pointer-events-none transition-opacity duration-300"
+    <section
+      id="cta-band"
+      ref={ref}
+      className="relative z-10 py-28 lg:py-40 border-t border-white/[0.09] overflow-hidden"
+    >
+      {/* Animated background pulse */}
+      {!shouldReduceMotion && (
+        <>
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
             style={{
-              background: `radial-gradient(500px circle at ${mousePos.x}% ${mousePos.y}%, rgba(0,0,0,0.2), transparent 40%)`,
+              background: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(140,255,180,0.07) 0%, transparent 70%)',
             }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
           />
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse 40% 30% at 50% 50%, rgba(124,58,237,0.06) 0%, transparent 70%)',
+            }}
+            animate={{ opacity: [1, 0.4, 1], scale: [1, 1.05, 1] }}
+            transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+          />
+        </>
+      )}
 
-          <div className="relative z-10 px-8 lg:px-16 py-16 lg:py-24">
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
-              <div className="flex-1">
-                <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-8">
-                  <span className="w-8 h-px bg-foreground/30" />
-                  Get started
-                </span>
-                <h2 className="text-4xl lg:text-7xl font-display tracking-tight mb-8 leading-[0.95]">
-                  Ready to ace
-                  <br />
-                  your exams?
-                </h2>
-                <p className="text-xl text-muted-foreground mb-12 leading-relaxed max-w-xl">
-                  Join thousands of students studying smarter with StudySense AI.
-                  Free to start, no credit card needed.
-                </p>
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  <Button
-                    size="lg"
-                    className="bg-foreground hover:bg-foreground/90 text-background px-8 h-14 text-base rounded-full group"
-                    asChild
-                  >
-                    <Link to="/register">
-                      Start Learning Free
-                      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="h-14 px-8 text-base rounded-full border-foreground/20 hover:bg-foreground/5"
-                    asChild
-                  >
-                    <Link to="/login">Sign In</Link>
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-8 font-mono">
-                  Free plan · No credit card · Cancel any time
-                </p>
-              </div>
-
-              {/* Tetrahedron */}
-              <div className="hidden lg:flex items-center justify-center w-[420px] h-[420px] -mr-8">
-                <AnimatedTetrahedron />
-              </div>
-            </div>
+      <div className="max-w-[900px] mx-auto px-6 lg:px-10 text-center space-y-8 relative">
+        {/* Sparkle icon */}
+        <motion.div
+          className="flex justify-center"
+          initial={{ opacity: 0, scale: 0 }}
+          animate={inView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.1 }}
+        >
+          <div className="w-14 h-14 rounded-2xl bg-[#8CFFB4]/10 border border-[#8CFFB4]/20 flex items-center justify-center">
+            <Sparkles className="w-6 h-6 text-[#8CFFB4]" />
           </div>
+        </motion.div>
 
-          {/* Corner decorations */}
-          <div className="absolute top-0 right-0 w-32 h-32 border-b border-l border-foreground/10" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 border-t border-r border-foreground/10" />
-        </div>
+        <motion.h2
+          className="font-serif-italic text-5xl sm:text-7xl lg:text-8xl text-[#F4F2EC] leading-[1.05] tracking-tight"
+          initial={{ opacity: 0, y: 30 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] as const }}
+        >
+          Start learning smarter today.
+        </motion.h2>
+
+        <motion.p
+          className="text-[#A6A49C] text-lg sm:text-xl leading-relaxed max-w-xl mx-auto font-normal font-sans"
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.25, ease: [0.16, 1, 0.3, 1] as const }}
+        >
+          Join thousands of students who already study with Nora AI. Free forever, upgrade when you&apos;re ready.
+        </motion.p>
+
+        <motion.div
+          className="flex items-center justify-center pt-4"
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] as const }}
+        >
+          {user ? (
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <Button
+                size="lg"
+                className="bg-[#F4F2EC] hover:bg-[#F4F2EC]/90 text-[#08080a] font-offbit text-sm font-bold uppercase tracking-wider px-9 h-13 rounded-full group shadow-xl transition-colors flex items-center gap-2"
+                asChild
+              >
+                <Link to="/dashboard">
+                  <LayoutDashboard className="w-5 h-5 text-[#08080a]" />
+                  Open Dashboard
+                  <motion.span
+                    className="inline-flex"
+                    animate={{ x: [0, 3, 0] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <ArrowRight className="w-4 h-4 ml-1" />
+                  </motion.span>
+                </Link>
+              </Button>
+            </motion.div>
+          ) : (
+            <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              <Button
+                size="lg"
+                className="bg-[#F4F2EC] hover:bg-[#F4F2EC]/90 text-[#08080a] font-offbit text-sm font-bold uppercase tracking-wider px-9 h-13 rounded-full group shadow-xl transition-colors"
+                asChild
+              >
+                <Link to="/register">
+                  Start Learning Free
+                  <motion.span
+                    className="inline-flex ml-2"
+                    animate={{ x: [0, 3, 0] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <ArrowRight className="w-4 h-4" />
+                  </motion.span>
+                </Link>
+              </Button>
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Trust badges */}
+        <motion.div
+          className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs text-[#726F68] font-sans"
+          initial={{ opacity: 0 }}
+          animate={inView ? { opacity: 1 } : {}}
+          transition={{ duration: 0.6, delay: 0.5 }}
+        >
+          {['No credit card required', 'Free forever plan', '2,400+ students enrolled'].map((text, i) => (
+            <span key={i} className="flex items-center gap-1.5">
+              <span className="text-[#8CFFB4]">✓</span> {text}
+            </span>
+          ))}
+        </motion.div>
       </div>
     </section>
   )
 }
+
+export default CtaSection

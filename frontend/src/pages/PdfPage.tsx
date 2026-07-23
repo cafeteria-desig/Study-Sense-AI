@@ -1,254 +1,297 @@
-import { useState, useRef } from 'react'
-import { AppShell } from '@/components/AppShell'
-import { Button } from '@/components/ui/button'
-import { api } from '@/services/api'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { Upload, ChevronDown, ChevronUp, Loader2, FileText, RotateCcw } from 'lucide-react'
-import { toast } from 'sonner'
+import { useState } from 'react'
 
-interface QAPair {
-  question: string
-  answer: string
-}
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { useAuth } from '@/contexts/AuthContext'
+import { VoiceControls } from '@/components/ui/VoiceControls'
+import { VoiceSelector } from '@/components/ui/VoiceSelector'
+import { NoraSpeechRoom } from '@/components/ui/NoraSpeechRoom'
+import { DownloadDropdown } from '@/components/ui/DownloadDropdown'
+import { KineticGrid } from '@/components/ui/KineticGrid'
+import { GlowingSearchDock } from '@/components/ui/GlowingSearchDock'
+import { Message, MessageAvatar, MessageContent } from '@/components/ui/message'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import {
+  MessageScroller,
+  MessageScrollerViewport,
+  MessageScrollerContent,
+  MessageScrollerButton
+} from '@/components/ui/message-scroller'
+import { ArrowLeft, Copy, Check, MessageSquare, Radio, Bot, User, Activity } from 'lucide-react'
+import { MarkdownViewer } from '@/components/ui/MarkdownViewer'
 
-interface PdfResult {
-  fileName: string
-  summary: string
-  qa_pairs: QAPair[]
-}
-
-async function extractPdfText(file: File): Promise<string> {
-  const pdfjsLib = await import('pdfjs-dist')
-  // Use CDN worker so we don't need to configure bundler
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(pdfjsLib as any).GlobalWorkerOptions.workerSrc =
-    `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`
-
-  const buffer = await file.arrayBuffer()
-  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise
-  let text = ''
-  for (let p = 1; p <= pdf.numPages; p++) {
-    const page = await pdf.getPage(p)
-    const content = await page.getTextContent()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    text += content.items.map((item: any) => item.str).join(' ') + '\n'
-  }
-  return text.trim()
+interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: string
 }
 
 export function PdfPage() {
-  const [file, setFile] = useState<File | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const [extracting, setExtracting] = useState(false)
-  const [result, setResult] = useState<PdfResult | null>(null)
+  const { session } = useAuth()
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [expanded, setExpanded] = useState<number | null>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
+  const [isLiveVoiceMode, setIsLiveVoiceMode] = useState(false)
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false)
 
-  const handleFile = (f: File) => {
-    if (!f.name.toLowerCase().endsWith('.pdf')) {
-      setError('Please upload a PDF file.')
-      toast.error('Only PDF files are supported.')
-      return
+  const handleSend = async (e?: React.FormEvent, customText?: string) => {
+    if (e) e.preventDefault()
+    const textToSend = customText || input
+    if (!textToSend.trim() || loading) return
+
+    const userMessage: ChatMessage = {
+      role: 'user',
+      content: textToSend.trim(),
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
-    setFile(f)
-    setError(null)
-    setResult(null)
-    toast.success(`Loaded PDF: ${f.name}`)
-  }
 
-  const analyse = async () => {
-    if (!file || loading || extracting) return
-    setExtracting(true)
-    setError(null)
+    setMessages((prev) => [...prev, userMessage])
+    if (!customText) setInput('')
+    setLoading(true)
+
     try {
-      const text = await extractPdfText(file)
-      if (!text) throw new Error('Could not extract text. Make sure the PDF contains selectable text.')
-      setExtracting(false)
-      setLoading(true)
-      const res = await api.pdf(text, file.name)
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setResult(data)
-      toast.success('Document analysed successfully!')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
-      toast.error('Failed to analyse document.')
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const response = await fetch(`${apiUrl}/api/tutor`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session?.access_token || ''}`
+        },
+        body: JSON.stringify({
+          prompt: userMessage.content,
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content }))
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('API request failed')
+      }
+
+      const data = await response.json()
+      const assistantMessage: ChatMessage = {
+        role: 'assistant',
+        content: data.notes || data.summary || data.response || 'No response generated.',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+      setMessages((prev) => [...prev, assistantMessage])
+    } catch (error) {
+      console.error(error)
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: 'Sorry, I encountered an issue connecting to Nora AI. Please check your backend service.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ])
     } finally {
-      setExtracting(false)
       setLoading(false)
     }
   }
 
-  const reset = () => {
-    setFile(null)
-    setResult(null)
-    setError(null)
-    setExpanded(null)
-    toast.info('Ready for new file upload.')
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(index)
+    setTimeout(() => setCopiedId(null), 2000)
   }
 
-
-  const statusLabel = extracting
-    ? 'Extracting text…'
-    : loading
-    ? 'Analysing with AI…'
-    : 'Analyse PDF'
+  const isInitialState = messages.length === 0
 
   return (
-    <AppShell>
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
-        {/* Header */}
-        <div className="mb-10">
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
-            <span className="w-8 h-px bg-foreground/30" />
-            PDF Summariser
-          </span>
-          <h1 className="text-4xl font-display tracking-tight">Summarise Any Document</h1>
-          <p className="text-muted-foreground font-mono text-sm mt-2">
-            Upload a PDF → get key points and Q&amp;A in seconds.
-          </p>
+    <div className="h-[100dvh] bg-[#08080a] text-[#F4F2EC] flex flex-col overflow-hidden font-sans relative selection:bg-white/20 selection:text-[#08080a]">
+      {/* Kinetic Warp Grid Background */}
+      <KineticGrid globalColor="monochrome" />
+
+      {/* ─── SLEEK MONOCHROME HEADER BAR ─── */}
+      <header className="px-6 py-3 border-b border-white/10 bg-[#08080a]/80 backdrop-blur-xl sticky top-0 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-mono text-[#A6A49C] hover:text-[#F4F2EC] transition-colors p-1"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Dashboard</span>
+          </Link>
+
+          <span className="text-white/20 hidden sm:inline">|</span>
+
+          {/* Nora Badge with White Pulsing Dot */}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/15 bg-white/5 backdrop-blur-md text-[11px] font-semibold tracking-wider text-[#F4F2EC]">
+            <span className="relative flex h-2 w-2 items-center justify-center">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+            </span>
+            <span className="font-offbit">NORA AI SPECIALIST</span>
+          </div>
         </div>
 
-        {/* Drop zone */}
-        {!result && (
-          <>
-            <div
-              className={`border-2 border-dashed p-6 md:p-14 text-center transition-all duration-200 cursor-pointer mb-5 ${
-                dragging
-                  ? 'border-foreground bg-foreground/5'
-                  : file
-                  ? 'border-foreground/40'
-                  : 'border-foreground/20 hover:border-foreground/40 hover:bg-foreground/3'
+        {/* Mode Switcher & Voice Selector */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border border-white/15 p-0.5 bg-white/5 text-xs rounded-full backdrop-blur-md">
+            <button
+              type="button"
+              onClick={() => setIsLiveVoiceMode(false)}
+              className={`px-2.5 sm:px-3.5 py-1.5 transition-all flex items-center gap-1.5 rounded-full text-xs font-medium ${
+                !isLiveVoiceMode
+                  ? 'bg-[#F4F2EC] text-[#08080a] font-semibold shadow-md'
+                  : 'text-[#A6A49C] hover:text-[#F4F2EC]'
               }`}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={(e) => {
-                e.preventDefault()
-                setDragging(false)
-                const f = e.dataTransfer.files[0]
-                if (f) handleFile(f)
-              }}
-              onClick={() => inputRef.current?.click()}
             >
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".pdf"
-                className="hidden"
-                onChange={(e) => { if (e.target.files?.[0]) handleFile(e.target.files[0]) }}
-              />
-
-              {file ? (
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-10 h-10 border border-foreground/20 flex items-center justify-center">
-                    <FileText className="w-5 h-5" strokeWidth={1.5} />
-                  </div>
-                  <div>
-                    <p className="font-mono text-sm font-medium">{file.name}</p>
-                    <p className="font-mono text-xs text-muted-foreground mt-0.5">
-                      {(file.size / 1024).toFixed(1)} KB — click to change
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-3">
-                  <Upload className="w-8 h-8 text-muted-foreground/50" strokeWidth={1} />
-                  <div>
-                    <p className="font-mono text-sm text-muted-foreground">Drop a PDF here or click to browse</p>
-                    <p className="font-mono text-xs text-muted-foreground/50 mt-1">
-                      Text-based PDFs only (not scanned images)
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {error && (
-              <p className="text-sm font-mono text-destructive bg-destructive/5 border border-destructive/20 px-4 py-3 mb-5">
-                {error}
-              </p>
-            )}
-
-            {file && (
-              <Button
-                onClick={analyse}
-                disabled={loading || extracting}
-                className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 rounded-none"
-              >
-                {(extracting || loading) ? (
-                  <span className="flex items-center gap-2 font-mono text-xs">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {statusLabel}
-                  </span>
-                ) : (
-                  'Analyse PDF'
-                )}
-              </Button>
-            )}
-          </>
-        )}
-
-        {/* Result */}
-        {result && (
-          <div className="space-y-6">
-            {/* Summary */}
-            <div className="border border-foreground/10">
-              <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-foreground/10">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-                  <span className="font-mono text-sm text-muted-foreground">{result.fileName}</span>
-                </div>
-                <button
-                  onClick={reset}
-                  className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  New file
-                </button>
-              </div>
-              <div className="px-4 py-5 md:px-6 md:py-6 prose prose-sm max-w-none font-mono text-sm [&_h1]:font-display [&_h2]:font-display [&_strong]:font-semibold [&_li]:my-0.5">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{result.summary}</ReactMarkdown>
-              </div>
-            </div>
-
-            {/* Q&A */}
-            <div className="border border-foreground/10">
-              <div className="px-6 py-4 border-b border-foreground/10">
-                <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Q&amp;A Pairs ({result.qa_pairs.length})
-                </p>
-              </div>
-              <div className="divide-y divide-foreground/10">
-                {result.qa_pairs.map((qa, i) => (
-                  <div key={i}>
-                    <button
-                      onClick={() => setExpanded(expanded === i ? null : i)}
-                      className="w-full text-left px-4 md:px-6 py-4 flex items-start gap-4 hover:bg-foreground/3 transition-colors"
-                    >
-                      <span className="font-mono text-xs text-muted-foreground flex-shrink-0 mt-0.5">
-                        Q{i + 1}
-                      </span>
-                      <span className="font-mono text-sm flex-1 text-left">{qa.question}</span>
-                      {expanded === i
-                        ? <ChevronUp className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                        : <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
-                      }
-                    </button>
-                    {expanded === i && (
-                      <div className="px-4 md:px-6 pb-5 pl-10 md:pl-14">
-                        <p className="font-mono text-sm text-muted-foreground leading-relaxed">{qa.answer}</p>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+              <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Chat Mode</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsLiveVoiceMode(true)}
+              className={`px-2.5 sm:px-3.5 py-1.5 transition-all flex items-center gap-1.5 rounded-full text-xs font-medium ${
+                isLiveVoiceMode
+                  ? 'bg-[#F4F2EC] text-[#08080a] font-semibold shadow-md'
+                  : 'text-[#A6A49C] hover:text-[#F4F2EC]'
+              }`}
+            >
+              <Radio className="w-3.5 h-3.5 animate-pulse shrink-0" />
+              <span className="hidden sm:inline">Live Voice</span>
+            </button>
           </div>
-        )}
-      </div>
-    </AppShell>
+
+          {!isLiveVoiceMode && <VoiceSelector />}
+        </div>
+      </header>
+
+      {/* ─── LIVE VOICE MODE ─── */}
+      {isLiveVoiceMode && (
+        <div className="flex-1 overflow-hidden z-10">
+          <NoraSpeechRoom
+            authToken={session?.access_token}
+            onClose={() => setIsLiveVoiceMode(false)}
+          />
+        </div>
+      )}
+
+      {/* ─── TEXT CHAT MODE ─── */}
+      {!isLiveVoiceMode && (
+        <main className="flex-1 flex flex-col items-center justify-between overflow-hidden relative z-10 w-full min-h-0">
+          
+          {/* ─── ACTIVE CONVERSATION STREAM WITH MESSAGE SCROLLER ─── */}
+          {!isInitialState && (
+            <MessageScroller className="w-full flex-1 min-h-0">
+              <MessageScrollerViewport className="px-4 sm:px-6 py-6 flex flex-col items-center">
+                <MessageScrollerContent className="w-full max-w-3xl space-y-5 my-auto">
+                  {messages.map((msg, i) => (
+                    <Message key={i} role={msg.role}>
+                      <MessageAvatar>
+                        <Avatar className="w-8 h-8 border border-white/20 bg-white/10">
+                          <AvatarFallback className="text-[#F4F2EC] bg-transparent">
+                            {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                          </AvatarFallback>
+                        </Avatar>
+                      </MessageAvatar>
+
+                      <MessageContent>
+                        <div className="flex items-center justify-between mb-1.5 font-mono text-xs">
+                          <span className="uppercase tracking-wider text-[#A6A49C] font-semibold">
+                            {msg.role === 'user' ? 'Student' : 'Nora (AI Specialist)'}
+                          </span>
+                          <span className="text-[10px] text-[#726F68]">{msg.timestamp}</span>
+                        </div>
+
+                        <div className="text-sm sm:text-base font-sans leading-relaxed text-[#F4F2EC]">
+                          {msg.role === 'assistant' ? (
+                            <MarkdownViewer content={msg.content} />
+                          ) : (
+                            <p className="font-mono text-xs sm:text-sm whitespace-pre-wrap">{msg.content}</p>
+                          )}
+                        </div>
+
+                        {msg.role === 'assistant' && (
+                          <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between flex-wrap gap-2">
+                            <VoiceControls
+                              textToRead={msg.content}
+                              authToken={session?.access_token}
+                              size="sm"
+                            />
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => copyToClipboard(msg.content, i)}
+                                className="inline-flex items-center gap-1.5 text-xs font-mono text-[#A6A49C] hover:text-[#F4F2EC] transition-colors"
+                              >
+                                {copiedId === i ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                                {copiedId === i ? 'Copied' : 'Copy'}
+                              </button>
+                              <DownloadDropdown
+                                title={`Nora Response ${i + 1}`}
+                                content={msg.content}
+                                filenamePrefix="nora-notes"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </MessageContent>
+                    </Message>
+                  ))}
+
+                  {loading && (
+                    <div className="p-6 border border-white/15 bg-white/[0.04] backdrop-blur-xl animate-pulse flex items-center justify-between max-w-2xl rounded-3xl shadow-lg">
+                      <span className="text-xs font-mono text-[#F4F2EC] flex items-center gap-3">
+                        <Activity className="w-4 h-4 text-white animate-spin" />
+                        Nora is analyzing your request...
+                      </span>
+                      <span className="inline-block w-2 h-4 bg-[#F4F2EC] font-bold animate-pulse">▍</span>
+                    </div>
+                  )}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton />
+            </MessageScroller>
+          )}
+
+          {/* ─── CENTERED & ANIMATED GLOWING SEARCH DOCK CONTAINER ─── */}
+          <div
+            className={`w-full transition-all duration-700 ease-in-out px-4 flex flex-col items-center z-20 ${
+              isInitialState
+                ? 'my-auto justify-center max-w-2xl text-center space-y-6'
+                : 'pb-4 pt-1 shrink-0 max-w-2xl'
+            }`}
+          >
+            {/* Header Title in Initial State */}
+            {isInitialState && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="space-y-2"
+              >
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif-italic text-[#F4F2EC] tracking-tight leading-[1.12] max-w-xl mx-auto">
+                  I'm Nora, your AI Study Companion
+                </h1>
+                <p className="text-xs sm:text-sm text-[#A6A49C] font-mono tracking-wide">
+                  Click to expand search or start typing your study question
+                </p>
+              </motion.div>
+            )}
+
+            {/* Glowing Search Dock Component */}
+            <GlowingSearchDock
+              value={input}
+              onChange={setInput}
+              onSubmit={() => handleSend()}
+              placeholder="Ask Nora anything..."
+              loading={loading}
+              onSpeechResult={(transcript) => {
+                setIsSearchExpanded(true)
+                setInput(transcript)
+              }}
+              isInitialState={isInitialState}
+              isExpanded={isSearchExpanded}
+              onExpandChange={setIsSearchExpanded}
+            />
+          </div>
+        </main>
+      )}
+    </div>
   )
 }
+
+export default PdfPage

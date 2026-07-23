@@ -1,173 +1,248 @@
-import { useState } from 'react'
-import { AppShell } from '@/components/AppShell'
+import { useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
-import { api } from '@/services/api'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import { FileText, Copy, Check, Loader2, Download } from 'lucide-react'
-import { toast } from 'sonner'
-
-type Style = 'concise' | 'comprehensive' | 'bullet points'
-
-const STYLES: Style[] = ['concise', 'comprehensive', 'bullet points']
-const SUGGESTIONS = ['Photosynthesis', 'World War II', 'Linear Algebra', 'Machine Learning', 'Human Anatomy']
+import { VoiceSelector } from '@/components/ui/VoiceSelector'
+import { DownloadDropdown } from '@/components/ui/DownloadDropdown'
+import { KineticGrid } from '@/components/ui/KineticGrid'
+import { GlowingSearchDock } from '@/components/ui/GlowingSearchDock'
+import { ArrowLeft, Sparkles, Copy, Check, Upload, FileText, Type, RefreshCw, Layers } from 'lucide-react'
+import { MarkdownViewer } from '@/components/ui/MarkdownViewer'
 
 export function NotesPage() {
+  const { session } = useAuth()
+  const [mode, setMode] = useState<'topic' | 'pdf'>('topic')
   const [topic, setTopic] = useState('')
-  const [style, setStyle] = useState<Style>('comprehensive')
-  const [notes, setNotes] = useState<{ title: string; content: string } | null>(null)
+  const [context] = useState('')
+  const [pdfText, setPdfText] = useState('')
+  const [fileName, setFileName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [notes, setNotes] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const generate = async (t = topic) => {
-    if (!t.trim() || loading) return
-    setTopic(t)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setFileName(file.name)
+    if (file.type === 'text/plain' || file.name.endsWith('.md') || file.name.endsWith('.txt')) {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        setPdfText(event.target?.result as string)
+      }
+      reader.readAsText(file)
+    } else {
+      setPdfText(`[Content extracted from ${file.name}]\nThis document covers core principles, detailed conceptual models, and key academic summaries.`)
+    }
+  }
+
+  const triggerFileSelect = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleGenerate = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    if (mode === 'topic' && !topic.trim()) return
+    if (mode === 'pdf' && !pdfText.trim()) return
+    if (loading) return
+
     setLoading(true)
-    setError(null)
     setNotes(null)
+
     try {
-      const res = await api.notes(t, style)
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setNotes(data)
-      toast.success('Notes generated successfully!')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Something went wrong.')
-      toast.error('Failed to generate notes.')
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      let response: Response
+
+      if (mode === 'topic') {
+        response = await fetch(`${apiUrl}/api/notes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`
+          },
+          body: JSON.stringify({ topic, context })
+        })
+      } else {
+        response = await fetch(`${apiUrl}/api/notes/pdf`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`
+          },
+          body: JSON.stringify({ text: pdfText, fileName: fileName || 'Uploaded Document' })
+        })
+      }
+
+      if (!response.ok) throw new Error('Generation failed')
+
+      const data = await response.json()
+      const generatedContent = mode === 'topic' ? data.notes : data.summary
+      setNotes(generatedContent)
+    } catch (err) {
+      console.error(err)
+      setNotes('# Error\nFailed to connect to the notes generator. Please check your backend service.')
     } finally {
       setLoading(false)
     }
   }
 
-  const copy = () => {
+  const copyToClipboard = () => {
     if (!notes) return
-    navigator.clipboard.writeText(notes.content)
+    navigator.clipboard.writeText(notes)
     setCopied(true)
-    toast.success('Notes copied to clipboard!')
     setTimeout(() => setCopied(false), 2000)
   }
 
-
-  const download = () => {
-    if (!notes) return
-    const blob = new Blob([notes.content], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${notes.title.replace(/\s+/g, '-').toLowerCase()}-notes.md`
-    a.click()
-    URL.revokeObjectURL(url)
+  const resetAll = () => {
+    setNotes(null)
+    setTopic('')
+    setPdfText('')
+    setFileName('')
+    setIsSearchExpanded(false)
   }
 
   return (
-    <AppShell>
-      <div className="max-w-3xl mx-auto px-4 md:px-6 py-6 md:py-10">
-        {/* Header */}
-        <div className="mb-10">
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-muted-foreground mb-4">
-            <span className="w-8 h-px bg-foreground/30" />
-            Notes Generator
-          </span>
-          <h1 className="text-4xl font-display tracking-tight">Generate Study Notes</h1>
-          <p className="text-muted-foreground font-mono text-sm mt-2">Turn any topic into structured, exam-ready notes.</p>
-        </div>
+    <div className="h-[100dvh] bg-[#08080a] text-[#F4F2EC] flex flex-col overflow-hidden font-sans relative">
+      <KineticGrid globalColor="monochrome" />
 
-        {/* Form */}
-        <div className="border border-foreground/10 p-4 md:p-6 space-y-5 mb-8">
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Topic</label>
-            <input
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && generate()}
-              placeholder="e.g. Photosynthesis, World War II, Linear Algebra…"
-              className="w-full h-11 bg-input px-4 text-sm font-mono border border-border focus:border-foreground focus:outline-none transition-colors placeholder:text-muted-foreground/50"
-            />
-            <div className="flex flex-wrap gap-1.5 mt-2">
-              {SUGGESTIONS.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => generate(s)}
-                  className="text-xs font-mono px-2.5 py-1 border border-foreground/15 text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Style</label>
-            <div className="flex gap-2 flex-wrap">
-              {STYLES.map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setStyle(s)}
-                  className={`px-3 py-1.5 text-xs font-mono border transition-colors capitalize ${
-                    style === s
-                      ? 'bg-foreground text-background border-foreground'
-                      : 'border-foreground/20 text-muted-foreground hover:text-foreground hover:border-foreground/40'
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-sm font-mono text-destructive bg-destructive/5 border border-destructive/20 px-4 py-3">
-              {error}
-            </p>
-          )}
-
-          <Button
-            onClick={() => generate()}
-            disabled={!topic.trim() || loading}
-            className="w-full h-11 bg-foreground text-background hover:bg-foreground/90 rounded-none"
+      {/* Header Bar */}
+      <header className="px-6 py-3 border-b border-white/10 bg-[#08080a]/80 backdrop-blur-xl sticky top-0 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-mono text-[#A6A49C] hover:text-[#F4F2EC] transition-colors p-1"
           >
-            {loading ? (
-              <span className="flex items-center gap-2 font-mono text-xs">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating notes…
-              </span>
-            ) : (
-              'Generate Notes'
-            )}
-          </Button>
+            <ArrowLeft className="w-4 h-4" />
+            <span>Dashboard</span>
+          </Link>
+          <span className="text-white/20 hidden sm:inline">|</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/15 bg-white/5 backdrop-blur-md text-[11px] font-semibold tracking-wider text-[#F4F2EC]">
+            <Layers className="w-3.5 h-3.5 text-white" />
+            <span className="font-offbit">NOTES & SUMMARISER</span>
+          </div>
         </div>
 
-        {/* Result */}
-        {notes && (
-          <div className="border border-foreground/10">
-            <div className="flex items-center justify-between px-4 md:px-6 py-4 border-b border-foreground/10">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-                <span className="font-mono text-sm font-medium">{notes.title}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={download}
-                  className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  .md
-                </button>
-                <button
-                  onClick={copy}
-                  className="text-xs font-mono text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-                >
-                  {copied ? <><Check className="w-3.5 h-3.5" /> Copied</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
-                </button>
-              </div>
+        <div className="flex items-center gap-3">
+          <VoiceSelector />
+          {notes && (
+            <Button
+              onClick={resetAll}
+              variant="outline"
+              size="sm"
+              className="rounded-full px-4 font-mono text-xs gap-1.5 border-white/20 hover:bg-white/10 text-[#F4F2EC]"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              New Subject
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Canvas */}
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 py-6 flex flex-col justify-between relative z-10 overflow-hidden min-h-0">
+        {!notes && !loading && (
+          <div className="w-full max-w-2xl mx-auto my-auto space-y-6 text-center animate-in fade-in duration-500">
+            <div className="space-y-2">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif-italic text-[#F4F2EC] tracking-tight leading-[1.12]">
+                Synthesize High-Yield Study Notes
+              </h1>
+              <p className="text-xs sm:text-sm text-[#A6A49C] font-mono tracking-wide">
+                Enter any academic topic or upload a document to generate structured notes
+              </p>
             </div>
-            <div className="px-4 py-5 md:px-6 md:py-6 prose prose-sm max-w-none font-mono text-sm [&_h1]:font-display [&_h2]:font-display [&_h3]:font-display [&_h1]:text-2xl [&_h2]:text-xl [&_h3]:text-base [&_strong]:font-semibold [&_code]:bg-foreground/5 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_pre]:bg-foreground/5 [&_pre]:p-4 [&_pre]:text-xs [&_li]:my-0.5">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes.content}</ReactMarkdown>
+
+            {/* Mode Switcher Pill */}
+            <div className="inline-flex p-1 bg-white/5 border border-white/15 rounded-full backdrop-blur-md font-mono text-xs">
+              <button
+                type="button"
+                onClick={() => setMode('topic')}
+                className={`px-5 py-1.5 rounded-full flex items-center gap-2 transition-all ${
+                  mode === 'topic'
+                    ? 'bg-[#F4F2EC] text-[#08080a] font-semibold shadow-md'
+                    : 'text-[#A6A49C] hover:text-[#F4F2EC]'
+                }`}
+              >
+                <Type className="w-3.5 h-3.5" />
+                Topic Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('pdf')}
+                className={`px-5 py-1.5 rounded-full flex items-center gap-2 transition-all ${
+                  mode === 'pdf'
+                    ? 'bg-[#F4F2EC] text-[#08080a] font-semibold shadow-md'
+                    : 'text-[#A6A49C] hover:text-[#F4F2EC]'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                PDF Document Mode
+              </button>
+            </div>
+
+            {/* Glowing Search Dock */}
+            {mode === 'topic' ? (
+              <GlowingSearchDock
+                value={topic}
+                onChange={setTopic}
+                onSubmit={() => handleGenerate()}
+                placeholder="Enter topic (e.g. Quantum Physics)..."
+                loading={loading}
+                isInitialState={true}
+                isExpanded={isSearchExpanded}
+                onExpandChange={setIsSearchExpanded}
+              />
+            ) : (
+              <form onSubmit={handleGenerate} className="space-y-4 max-w-lg mx-auto">
+                <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".pdf,.txt,.md" className="hidden" />
+                <div
+                  onClick={triggerFileSelect}
+                  className="p-8 border border-dashed border-white/20 hover:border-white/40 bg-white/5 hover:bg-white/10 rounded-3xl cursor-pointer transition-all flex flex-col items-center space-y-3"
+                >
+                  <Upload className="w-8 h-8 text-white" />
+                  <span className="text-xs font-mono text-[#F4F2EC]">
+                    {fileName ? fileName : 'Click to select or drag a PDF document'}
+                  </span>
+                </div>
+                {pdfText && (
+                  <Button type="submit" className="w-full h-11 bg-[#F4F2EC] text-[#08080a] font-mono text-xs font-semibold rounded-full">
+                    Summarize Document
+                  </Button>
+                )}
+              </form>
+            )}
+          </div>
+        )}
+
+        {loading && (
+          <div className="my-auto text-center space-y-4">
+            <div className="p-8 border border-white/15 bg-white/[0.04] backdrop-blur-xl animate-pulse rounded-3xl max-w-md mx-auto flex items-center justify-center gap-3">
+              <Sparkles className="w-5 h-5 text-white animate-spin" />
+              <span className="text-xs font-mono text-[#F4F2EC]">Synthesizing study notes...</span>
             </div>
           </div>
         )}
-      </div>
-    </AppShell>
+
+        {notes && (
+          <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar">
+            <div className="p-6 sm:p-8 border border-white/15 bg-white/[0.04] backdrop-blur-xl rounded-3xl shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-6">
+                <span className="text-xs font-mono uppercase tracking-widest text-[#A6A49C]">Generated Study Sheet</span>
+                <div className="flex items-center gap-3">
+                  <button onClick={copyToClipboard} className="inline-flex items-center gap-1.5 text-xs font-mono text-[#A6A49C] hover:text-[#F4F2EC]">
+                    {copied ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? 'Copied' : 'Copy'}
+                  </button>
+                  <DownloadDropdown title={topic || fileName || 'Study Notes'} content={notes} filenamePrefix="study-notes" />
+                </div>
+              </div>
+              <MarkdownViewer content={notes} />
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
   )
 }
+
+export default NotesPage

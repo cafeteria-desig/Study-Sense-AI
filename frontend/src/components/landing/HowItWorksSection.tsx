@@ -1,185 +1,156 @@
-import { useEffect, useRef, useState } from 'react'
+import { Eyebrow } from '@/components/ui/Eyebrow'
+import { motion, useInView } from 'framer-motion'
+import { useRef, useState } from 'react'
+import { Upload, BookOpen, Layers, Target } from 'lucide-react'
 
 const steps = [
   {
-    number: 'I',
-    title: 'Enter your topic or upload a file',
-    description:
-      'Type a subject, paste a textbook section, or upload a PDF. StudySense accepts anything you throw at it.',
-    preview: `// StudySense detects your content
-studysense.ingest({
-  topic: "Photosynthesis",
-  level: "A-Level Biology",
-  exam_date: "2025-06-12"
-})
-// → Content parsed in 0.3s`,
+    number: '01',
+    title: 'Upload anything',
+    description: 'Paste a topic, drop a PDF, or type a textbook chapter. Nora handles any document or input format seamlessly.',
+    icon: Upload,
+    accent: '#8CFFB4',
   },
   {
-    number: 'II',
-    title: 'AI generates your study material',
-    description:
-      'In seconds, receive structured notes, a quiz, flashcard deck, and an exam-ready revision schedule.',
-    preview: `// Materials generated
-{
-  notes: { sections: 6, words: 1240 },
-  quiz:  { questions: 10, types: "MCQ" },
-  cards: { count: 24 },
-  plan:  { days: 14, tasks: 42 }
-}`,
+    number: '02',
+    title: 'Nora reads it',
+    description: 'Our AI companion Nora reads and synthesizes your material, extracting key definitions, core concepts, and formulas.',
+    icon: BookOpen,
+    accent: '#7C3AED',
   },
   {
-    number: 'III',
-    title: 'Learn, quiz, track, repeat',
-    description:
-      'Work through your material with the AI Tutor by your side. Track mastery, reshuffle weak cards, retake quizzes.',
-    preview: `// Your progress
-studysense.progress("photosynthesis")
-// → {
-//   mastery: "74%",
-//   streak: "3 days",
-//   next_review: "tomorrow"
-// }`,
+    number: '03',
+    title: 'Your study kit builds itself',
+    description: 'In seconds, structured notes, spaced-repetition flashcards, practice quizzes, and oral voice drills generate automatically.',
+    icon: Layers,
+    accent: '#06B6D4',
+  },
+  {
+    number: '04',
+    title: 'Practice until it sticks',
+    description: 'Run targeted active-recall sessions that adapt to your weak spots until you enter your exam with total confidence.',
+    icon: Target,
+    accent: '#F59E0B',
   },
 ]
 
-export function HowItWorksSection() {
-  const [activeStep, setActiveStep] = useState(0)
-  const [isVisible, setIsVisible] = useState(false)
-  const sectionRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setIsVisible(true) },
-      { threshold: 0.1 }
-    )
-    if (sectionRef.current) observer.observe(sectionRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveStep((prev) => (prev + 1) % steps.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
+function StepRow({
+  step,
+  index,
+  isLast,
+}: {
+  step: (typeof steps)[0]
+  index: number
+  isLast: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
+  const ref = useRef(null)
+  const inView = useInView(ref, { once: true, margin: '-60px' })
+  const Icon = step.icon
 
   return (
-    <section
-      id="how-it-works"
-      ref={sectionRef}
-      className="relative py-24 lg:py-32 bg-foreground text-background overflow-hidden"
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, x: -30 }}
+      animate={inView ? { opacity: 1, x: 0 } : {}}
+      transition={{ duration: 0.65, delay: index * 0.12, ease: [0.16, 1, 0.3, 1] as const }}
+      onHoverStart={() => setHovered(true)}
+      onHoverEnd={() => setHovered(false)}
+      className={`relative py-10 sm:py-12 grid md:grid-cols-12 gap-4 md:gap-8 items-center px-6 -mx-6 rounded-xl cursor-default ${!isLast ? 'border-b border-white/[0.09]' : ''}`}
+      style={{
+        background: hovered ? 'rgba(255,255,255,0.025)' : 'transparent',
+        transition: 'background 0.3s ease',
+      }}
     >
-      {/* Diagonal noise pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage:
-            'repeating-linear-gradient(-45deg, transparent, transparent 40px, currentColor 40px, currentColor 41px)',
-        }}
+      {/* Animated accent line on left */}
+      <motion.div
+        className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full"
+        style={{ background: step.accent }}
+        initial={{ scaleY: 0, originY: 0 }}
+        animate={inView ? { scaleY: 1 } : {}}
+        transition={{ duration: 0.5, delay: index * 0.12 + 0.3, ease: [0.16, 1, 0.3, 1] as const }}
       />
 
-      <div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-12">
+      {/* Number + Icon */}
+      <div className="md:col-span-2 flex items-center gap-4">
+        <motion.span
+          className="font-offbit text-4xl sm:text-6xl font-bold tracking-wider"
+          style={{ color: step.accent }}
+          animate={{ x: hovered ? 4 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+          {step.number}
+        </motion.span>
+        <motion.div
+          className="hidden sm:flex w-10 h-10 rounded-xl items-center justify-center border border-white/10"
+          style={{ background: `${step.accent}15` }}
+          animate={{ scale: hovered ? 1.1 : 1, rotate: hovered ? 8 : 0 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+          <Icon className="w-4 h-4" style={{ color: step.accent }} />
+        </motion.div>
+      </div>
+
+      {/* Title */}
+      <motion.div
+        className="md:col-span-4 font-offbit text-xl sm:text-2xl font-bold text-[#F4F2EC] tracking-tight"
+        animate={{ x: hovered ? 4 : 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25, delay: 0.02 }}
+      >
+        {step.title}
+      </motion.div>
+
+      {/* Description */}
+      <div className="md:col-span-6 text-[#A6A49C] text-base leading-relaxed font-sans">
+        {step.description}
+      </div>
+    </motion.div>
+  )
+}
+
+export function HowItWorksSection() {
+  const headerRef = useRef(null)
+  const headerInView = useInView(headerRef, { once: true, margin: '-80px' })
+
+  return (
+    <section id="how-it-works" className="relative z-10 py-28 lg:py-40 border-t border-white/[0.09]">
+      <div className="max-w-[1300px] mx-auto px-6 lg:px-10 space-y-16">
         {/* Header */}
-        <div className="mb-16 lg:mb-24">
-          <span className="inline-flex items-center gap-3 text-sm font-mono text-background/50 mb-6">
-            <span className="w-8 h-px bg-background/30" />
-            Process
-          </span>
-          <h2
-            className={`text-4xl lg:text-6xl font-display tracking-tight transition-all duration-700 ${
-              isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
+        <div ref={headerRef} className="max-w-2xl space-y-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={headerInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6 }}
           >
-            Three steps.
-            <br />
-            <span className="text-background/50">Your exam sorted.</span>
-          </h2>
+            <Eyebrow>FOUR-STEP PROCESS</Eyebrow>
+          </motion.div>
+          <motion.h2
+            className="font-serif-italic text-4xl sm:text-6xl text-[#F4F2EC] leading-tight"
+            initial={{ opacity: 0, y: 24 }}
+            animate={headerInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.1, ease: [0.16, 1, 0.3, 1] as const }}
+          >
+            How StudySense works.
+          </motion.h2>
+          <motion.p
+            className="text-[#A6A49C] text-lg leading-relaxed font-sans"
+            initial={{ opacity: 0, y: 20 }}
+            animate={headerInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            From raw notes to exam mastery in four effortless steps.
+          </motion.p>
         </div>
 
-        {/* Content */}
-        <div className="grid lg:grid-cols-2 gap-16 lg:gap-24">
-          {/* Steps */}
-          <div className="space-y-0">
-            {steps.map((step, index) => (
-              <button
-                key={step.number}
-                type="button"
-                onClick={() => setActiveStep(index)}
-                className={`w-full text-left py-8 border-b border-background/10 transition-all duration-500 group ${
-                  activeStep === index ? 'opacity-100' : 'opacity-40 hover:opacity-70'
-                }`}
-              >
-                <div className="flex items-start gap-6">
-                  <span className="font-display text-3xl text-background/30">{step.number}</span>
-                  <div className="flex-1">
-                    <h3 className="text-2xl lg:text-3xl font-display mb-3 group-hover:translate-x-2 transition-transform duration-300">
-                      {step.title}
-                    </h3>
-                    <p className="text-background/60 leading-relaxed">{step.description}</p>
-                    {activeStep === index && (
-                      <div className="mt-4 h-px bg-background/20 overflow-hidden">
-                        <div
-                          className="h-full bg-background"
-                          style={{ animation: 'progress-bar 5s linear forwards' }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Code preview */}
-          <div className="lg:sticky lg:top-32 self-start">
-            <div className="border border-background/10 overflow-hidden">
-              {/* Window chrome */}
-              <div className="px-6 py-4 border-b border-background/10 flex items-center justify-between">
-                <div className="flex gap-2">
-                  {[1, 2, 3].map((d) => (
-                    <div key={d} className="w-3 h-3 rounded-full bg-background/20" />
-                  ))}
-                </div>
-                <span className="text-xs font-mono text-background/40">studysense.ts</span>
-              </div>
-
-              {/* Code */}
-              <div className="p-8 font-mono text-sm min-h-[280px]">
-                <pre className="text-background/70 overflow-x-auto">
-                  {steps[activeStep].preview.split('\n').map((line, lineIndex) => (
-                    <div
-                      key={`${activeStep}-${lineIndex}`}
-                      className="leading-loose code-line-reveal"
-                      style={{ animationDelay: `${lineIndex * 80}ms` }}
-                    >
-                      <span className="text-background/20 select-none w-8 inline-block">
-                        {lineIndex + 1}
-                      </span>
-                      <span className="inline-flex flex-wrap">
-                        {line.split('').map((char, charIndex) => (
-                          <span
-                            key={`${activeStep}-${lineIndex}-${charIndex}`}
-                            className="code-char-reveal"
-                            style={{ animationDelay: `${lineIndex * 80 + charIndex * 12}ms` }}
-                          >
-                            {char === ' ' ? '\u00A0' : char}
-                          </span>
-                        ))}
-                      </span>
-                    </div>
-                  ))}
-                </pre>
-              </div>
-
-              {/* Status bar */}
-              <div className="px-6 py-4 border-t border-background/10 flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs font-mono text-background/40">Ready</span>
-              </div>
-            </div>
-          </div>
+        {/* Steps */}
+        <div className="border-t border-white/[0.09]">
+          {steps.map((step, idx) => (
+            <StepRow key={step.number} step={step} index={idx} isLast={idx === steps.length - 1} />
+          ))}
         </div>
       </div>
     </section>
   )
 }
+
+export default HowItWorksSection

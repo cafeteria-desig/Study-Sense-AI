@@ -1,153 +1,190 @@
-'use client'
-
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { UserButton } from '@clerk/clerk-react'
+import { dark } from '@clerk/themes'
 import { Button } from '@/components/ui/button'
-import { Menu, X } from 'lucide-react'
-
-const navLinks = [
-  { name: 'Features', href: '#features' },
-  { name: 'How it Works', href: '#how-it-works' },
-  { name: 'Tools', href: '#tools' },
-]
+import { ArrowRight, Menu, X, LayoutDashboard } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function Navigation() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const { user } = useAuth()
+  const [scrolled, setScrolled] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', handleScroll)
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
-    <header
-      className={`fixed z-50 transition-all duration-500 ${
-        isScrolled ? 'top-4 left-4 right-4' : 'top-0 left-0 right-0'
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-[#08080a]/75 backdrop-blur-[14px] border-b border-white/[0.09]'
+          : 'bg-transparent border-b border-transparent'
       }`}
     >
-      <nav
-        className={`mx-auto transition-all duration-500 ${
-          isScrolled || isMobileMenuOpen
-            ? 'bg-background/80 backdrop-blur-xl border border-foreground/10 rounded-2xl shadow-xs max-w-[1200px]'
-            : 'bg-transparent max-w-[1400px]'
-        }`}
-      >
-        <div
-          className={`flex items-center justify-between transition-all duration-500 px-6 lg:px-8 ${
-            isScrolled ? 'h-14' : 'h-20'
-          }`}
+      <div className="max-w-[1300px] mx-auto px-6 lg:px-10 flex items-center justify-between h-20">
+        {/* Brand Logo with DotGothic16 Offbit Font */}
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <motion.span
+            className="font-offbit text-xl font-bold tracking-tight text-[#F4F2EC]"
+            whileHover={{ letterSpacing: '0.06em' }}
+            transition={{ duration: 0.3 }}
+          >
+            StudySense
+          </motion.span>
+          <motion.span
+            className="font-offbit text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#8CFFB4]/30 bg-[rgba(140,255,180,0.14)] text-[#8CFFB4] uppercase tracking-wider"
+            whileHover={{ scale: 1.1 }}
+            transition={{ type: 'spring', stiffness: 400 }}
+          >
+            AI
+          </motion.span>
+        </Link>
+
+        {/* Center Navigation Links in Offbit Font */}
+        <div className="hidden md:flex items-center gap-8 text-xs font-offbit tracking-wider uppercase text-[#A6A49C] absolute left-1/2 -translate-x-1/2">
+          <a href="#features" className="hover:text-[#F4F2EC] transition-colors">
+            Features
+          </a>
+          <a href="#how-it-works" className="hover:text-[#F4F2EC] transition-colors">
+            How it Works
+          </a>
+        </div>
+
+        {/* Right Action Buttons */}
+        <div className="hidden md:flex items-center gap-4">
+          {user ? (
+            <>
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  baseTheme: dark,
+                  elements: {
+                    userButtonPopoverFooter: '!hidden',
+                    devModeBadge: '!hidden',
+                    footer: '!hidden',
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                className="bg-[#F4F2EC] hover:bg-[#F4F2EC]/90 text-[#08080a] font-offbit text-xs font-bold px-5 h-10 rounded-full group shadow-md transition-all hover:-translate-y-0.5 flex items-center gap-2 tracking-wide uppercase"
+                asChild
+              >
+                <Link to="/dashboard">
+                  <LayoutDashboard className="w-4 h-4 text-[#08080a]" />
+                  Open Dashboard
+                  <ArrowRight className="w-3.5 h-3.5 ml-1 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className="text-xs font-offbit uppercase tracking-wider text-[#A6A49C] hover:text-[#F4F2EC] transition-colors px-3 py-1.5"
+              >
+                Sign In
+              </Link>
+              <Button
+                size="sm"
+                className="bg-[#F4F2EC] hover:bg-[#F4F2EC]/90 text-[#08080a] font-offbit text-xs font-bold px-5 h-10 rounded-full group shadow-md transition-all hover:-translate-y-0.5 uppercase tracking-wide"
+                asChild
+              >
+                <Link to="/register">
+                  Get Started
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Hamburger Button */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 text-[#F4F2EC]"
+          aria-label="Toggle Navigation"
         >
-          {/* Logo */}
-          <Link to="/" className="flex items-baseline gap-1 group">
-            <span
-              className={`font-display tracking-tight transition-all duration-500 ${
-                isScrolled ? 'text-xl' : 'text-2xl'
-              }`}
-            >
-              StudySense
-            </span>
-            <span
-              className={`text-muted-foreground font-mono transition-all duration-500 ${
-                isScrolled ? 'text-[10px]' : 'text-xs'
-              }`}
-            >
-              AI
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-10">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="text-sm text-foreground/70 hover:text-foreground transition-colors duration-300 relative group"
-              >
-                {link.name}
-                <span className="absolute -bottom-1 left-0 w-0 h-px bg-foreground transition-all duration-300 group-hover:w-full" />
-              </a>
-            ))}
-          </div>
-
-          {/* Desktop CTAs */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              to="/login"
-              className={`text-foreground/70 hover:text-foreground transition-all duration-300 ${
-                isScrolled ? 'text-xs' : 'text-sm'
-              }`}
-            >
-              Sign in
-            </Link>
-            <Button
-              size="sm"
-              className={`bg-foreground hover:bg-foreground/90 text-background rounded-full transition-all duration-500 ${
-                isScrolled ? 'px-4 h-8 text-xs' : 'px-6'
-              }`}
-              asChild
-            >
-              <Link to="/register">Get Started Free</Link>
-            </Button>
-          </div>
-
-          {/* Mobile Toggle */}
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-2"
-            aria-label="Toggle menu"
-          >
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Full-Screen Overlay */}
-      <div
-        className={`md:hidden fixed inset-0 bg-background z-40 transition-all duration-500 ${
-          isMobileMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-        }`}
-      >
-        <div className="flex flex-col h-full px-8 pt-28 pb-8">
-          <div className="flex-1 flex flex-col justify-center gap-8">
-            {navLinks.map((link, i) => (
-              <a
-                key={link.name}
-                href={link.href}
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`text-5xl font-display text-foreground hover:text-muted-foreground transition-all duration-500 ${
-                  isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                }`}
-                style={{ transitionDelay: isMobileMenuOpen ? `${i * 75}ms` : '0ms' }}
-              >
-                {link.name}
-              </a>
-            ))}
-          </div>
-
-          <div
-            className={`flex gap-4 pt-8 border-t border-foreground/10 transition-all duration-500 ${
-              isMobileMenuOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-            }`}
-            style={{ transitionDelay: isMobileMenuOpen ? '225ms' : '0ms' }}
-          >
-            <Button variant="outline" className="flex-1 rounded-full h-14 text-base" asChild>
-              <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                Sign in
-              </Link>
-            </Button>
-            <Button
-              className="flex-1 bg-foreground text-background rounded-full h-14 text-base"
-              asChild
-            >
-              <Link to="/register" onClick={() => setIsMobileMenuOpen(false)}>
-                Get Started
-              </Link>
-            </Button>
-          </div>
-        </div>
+          {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
       </div>
-    </header>
+
+      {/* Mobile Drawer with AnimatePresence */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            key="mobile-menu"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] as const }}
+            className="md:hidden overflow-hidden bg-[#08080a]/95 backdrop-blur-xl border-b border-white/[0.09] font-offbit"
+          >
+            <motion.div
+              className="px-6 py-6 space-y-4"
+              initial={{ y: -10 }}
+              animate={{ y: 0 }}
+              transition={{ delay: 0.1, duration: 0.3, ease: [0.16, 1, 0.3, 1] as const }}
+            >
+          <a
+            href="#features"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-sm uppercase tracking-wider text-[#A6A49C] hover:text-[#F4F2EC]"
+          >
+            Features
+          </a>
+          <a
+            href="#how-it-works"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block text-sm uppercase tracking-wider text-[#A6A49C] hover:text-[#F4F2EC]"
+          >
+            How it Works
+          </a>
+          <div className="pt-4 border-t border-white/[0.09] flex flex-col gap-3">
+            {user ? (
+              <Button
+                className="w-full justify-center bg-[#F4F2EC] text-[#08080a] font-offbit text-xs font-bold uppercase tracking-wide h-11 rounded-full flex items-center gap-2"
+                asChild
+              >
+                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                  <LayoutDashboard className="w-4 h-4" />
+                  Open Dashboard <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-center text-xs font-offbit uppercase tracking-wider text-[#A6A49C] py-2"
+                >
+                  Sign In
+                </Link>
+                <Button
+                  className="w-full justify-center bg-[#F4F2EC] text-[#08080a] font-semibold h-11 rounded-full"
+                  asChild
+                >
+                  <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                    Get Started Free <ArrowRight className="w-4 h-4 ml-1.5" />
+                  </Link>
+                </Button>
+              </>
+            )}
+          </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
   )
 }
+
+export default Navigation
