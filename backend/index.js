@@ -41,12 +41,16 @@ app.use(
       // Allow explicitly configured FRONTEND_URL origins
       if (allowedOrigins.includes(origin)) return callback(null, true)
 
-      // Allow any localhost or 192.168.x.x network IP over http or https on any port
+      // Allow any *.amplifyapp.com, *.vercel.app, or local origins
+      const isAllowedDomain = /\.(amplifyapp\.com|vercel\.app)$/.test(origin)
       const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/.test(origin)
-      if (isLocal) return callback(null, true)
+
+      if (isAllowedDomain || isLocal) {
+        return callback(null, true)
+      }
 
       console.warn(`[CORS Blocked] Origin: ${origin}`)
-      callback(new Error(`CORS policy blocked request from: ${origin}`))
+      callback(null, false)
     },
     credentials: true,
   })
