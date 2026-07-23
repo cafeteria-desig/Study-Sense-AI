@@ -328,21 +328,21 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
     <div className="w-full h-full bg-[#08080a] text-[#F4F2EC] flex flex-col overflow-hidden relative font-sans select-none">
 
       {/* ── Header ── */}
-      <div className="w-full px-6 py-4 flex items-center justify-between border-b border-white/[0.07] shrink-0 z-10">
-        <div className="flex items-center gap-2.5">
-          <span className={`w-2 h-2 rounded-full transition-colors duration-500 ${
+      <div className="w-full px-3 sm:px-6 py-3 sm:py-4 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 border-b border-white/[0.07] shrink-0 z-10">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`w-2 h-2 rounded-full transition-colors duration-500 shrink-0 ${
             phase === 'speaking' ? 'bg-amber-300 shadow-[0_0_8px_theme(colors.amber.300)] animate-pulse'
             : phase === 'listening' ? 'bg-cyan-300 shadow-[0_0_8px_theme(colors.cyan.300)] animate-pulse'
             : isSessionActive ? 'bg-white animate-pulse shadow-[0_0_8px_#fff]'
             : 'bg-white/20'
           }`} />
-          <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-[#A6A49C]">
+          <span className="font-mono text-[10px] sm:text-[11px] font-semibold uppercase tracking-widest text-[#A6A49C]">
             Nora Live Call
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="border border-white/10 rounded-full px-1 py-0.5 bg-white/[0.03] hover:bg-white/[0.06] transition-colors">
+        <div className="flex items-center gap-2 shrink-0 max-w-full overflow-x-auto no-scrollbar">
+          <div className="border border-white/10 rounded-full px-1 py-0.5 bg-white/[0.03] hover:bg-white/[0.06] transition-colors shrink-0">
             <VoiceSelector />
           </div>
 
@@ -352,10 +352,10 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
               onClick={endSession}
-              className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-red-400/90 border border-red-500/30 rounded-full px-3 py-1.5 hover:bg-red-500/10 transition-colors"
+              className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-red-400/90 border border-red-500/30 rounded-full px-3 py-1.5 hover:bg-red-500/10 transition-colors shrink-0"
             >
               <PhoneOff className="w-3.5 h-3.5" />
-              End Call
+              <span>End Call</span>
             </motion.button>
           )}
         </div>
