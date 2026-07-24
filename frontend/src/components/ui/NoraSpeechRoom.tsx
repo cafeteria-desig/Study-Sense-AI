@@ -31,6 +31,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
   const [statusMsg, setStatusMsg] = useState('Ready when you are')
   const [errorMsg, setErrorMsg] = useState('')
   const [aiAudioLevel, setAiAudioLevel] = useState<number | undefined>(undefined)
+  const [userAudioLevel, setUserAudioLevel] = useState<number | undefined>(undefined)
   const [isMorphingToCall, setIsMorphingToCall] = useState(false)
 
   const recognitionRef = useRef<any>(null)
@@ -42,6 +43,22 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
   const loopRef = useRef(false)
   const noSpeechCountRef = useRef(0)
   const aiLevelIntervalRef = useRef<any>(null)
+  const userLevelIntervalRef = useRef<any>(null)
+
+  const startUserLevelSim = useCallback(() => {
+    if (userLevelIntervalRef.current) clearInterval(userLevelIntervalRef.current)
+    userLevelIntervalRef.current = setInterval(() => {
+      setUserAudioLevel(0.2 + Math.random() * 0.4)
+    }, 140)
+  }, [])
+
+  const stopUserLevelSim = useCallback(() => {
+    if (userLevelIntervalRef.current) {
+      clearInterval(userLevelIntervalRef.current)
+      userLevelIntervalRef.current = null
+    }
+    setUserAudioLevel(undefined)
+  }, [])
   
   // Ref to prevent stale closure in STT onend callback
   const liveTranscriptRef = useRef('')
@@ -67,6 +84,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
   }, [])
 
   const stopRecognition = useCallback(() => {
+    stopUserLevelSim()
     try {
       if (recognitionRef.current) {
         recognitionRef.current.onresult = null
@@ -77,7 +95,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
       }
     } catch (_) {}
     recognitionRef.current = null
-  }, [])
+  }, [stopUserLevelSim])
 
   const startAiLevelSim = useCallback(() => {
     if (aiLevelIntervalRef.current) clearInterval(aiLevelIntervalRef.current)
@@ -207,6 +225,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
 
     setPhase('listening')
     setStatusMsg('Listening… speak now')
+    startUserLevelSim()
 
     rec.onresult = (e: any) => {
       let current = ''
@@ -223,6 +242,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
 
     rec.onerror = (e: any) => {
       loopRef.current = false
+      stopUserLevelSim()
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
         activeRef.current = false
         setPhase('idle')
@@ -243,6 +263,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
 
     rec.onend = async () => {
       loopRef.current = false
+      stopUserLevelSim()
       const text = liveTranscriptRef.current.trim()
       liveTranscriptRef.current = ''
       setLiveTranscript('')
@@ -276,6 +297,7 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
     }
   }, [askNora, speakText])
 
+
   const startSession = useCallback(async () => {
     activeRef.current = true
     muteRef.current = false
@@ -288,7 +310,10 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        stream.getTracks().forEach(track => track.stop())
+        // Asynchronously release mic stream so OS audio hardware session remains active for Web Speech API
+        setTimeout(() => {
+          stream.getTracks().forEach(track => track.stop())
+        }, 2000)
       }
     } catch (micErr: any) {
       console.warn('[NoraSpeechRoom] Mic permission denied:', micErr)
@@ -351,8 +376,8 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
   const isSessionActive = phase !== 'idle' || activeRef.current
 
   const orbHue = phase === 'speaking' ? HUE_AI : phase === 'listening' ? HUE_USER : HUE_IDLE
-  const orbEnableVoice = phase === 'listening' && !muted && isSessionActive
-  const orbExternalLevel = phase === 'speaking' ? (aiAudioLevel ?? 0) : undefined
+  const orbEnableVoice = false
+  const orbExternalLevel = phase === 'speaking' ? (aiAudioLevel ?? 0) : phase === 'listening' ? (liveTranscript ? 0.75 : (userAudioLevel ?? 0.25)) : undefined
 
   return (
     <div className="w-full h-full bg-[#08080a] text-[#F4F2EC] flex flex-col overflow-hidden relative font-sans select-none">
