@@ -209,7 +209,14 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
     setStatusMsg('Listening… speak now')
 
     rec.onresult = (e: any) => {
-      const current = Array.from(e.results).map((r: any) => r[0].transcript).join('')
+      let current = ''
+      if (e.results) {
+        for (let i = 0; i < e.results.length; i++) {
+          if (e.results[i] && e.results[i][0]) {
+            current += e.results[i][0].transcript
+          }
+        }
+      }
       liveTranscriptRef.current = current
       setLiveTranscript(current)
     }

@@ -17,6 +17,7 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
   // STT State
   const [isListening, setIsListening] = useState(false)
   const recognitionRef = useRef<any>(null)
+  const accumulatedTranscriptRef = useRef<string>('')
 
   const stopAllAudio = () => {
     if (audioRef.current) {
@@ -151,8 +152,10 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-        // Stop temporary stream tracks so SpeechRecognition can lock onto hardware mic
-        stream.getTracks().forEach(track => track.stop())
+        // Asynchronously release mic stream so hardware session stays active for WebSpeech API on mobile
+        setTimeout(() => {
+          stream.getTracks().forEach(track => track.stop())
+        }, 2000)
       }
     } catch (micErr: any) {
       console.warn('[VoiceControls] Microphone permission denied:', micErr)
@@ -160,6 +163,7 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
       return
     }
 
+    accumulatedTranscriptRef.current = ''
     const recognition = new SpeechRecognition()
     recognition.continuous = false
     recognition.interimResults = true
@@ -170,11 +174,17 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
     }
 
     recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((result: any) => result[0].transcript)
-        .join('')
-      if (onSpeechResult) {
-        onSpeechResult(transcript)
+      let text = ''
+      if (event.results) {
+        for (let i = 0; i < event.results.length; i++) {
+          if (event.results[i] && event.results[i][0]) {
+            text += event.results[i][0].transcript
+          }
+        }
+      }
+      accumulatedTranscriptRef.current = text
+      if (text && onSpeechResult) {
+        onSpeechResult(text)
       }
     }
 
@@ -190,6 +200,10 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
 
     recognition.onend = () => {
       setIsListening(false)
+      const finalVal = accumulatedTranscriptRef.current.trim()
+      if (finalVal && onSpeechResult) {
+        onSpeechResult(finalVal)
+      }
     }
 
     recognitionRef.current = recognition
