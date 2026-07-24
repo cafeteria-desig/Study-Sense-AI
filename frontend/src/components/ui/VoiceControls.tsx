@@ -128,8 +128,8 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
     }
   }
 
-  // Speech-To-Text handler via Web Speech API
-  const toggleListening = () => {
+  // Speech-To-Text handler via Web Speech API with Mobile Compatibility
+  const toggleListening = async () => {
     if (isListening) {
       stopListening()
       return
@@ -141,10 +141,29 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
       return
     }
 
+    // Check secure context for mobile devices
+    if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      alert('Microphone access requires a secure HTTPS connection on mobile devices.')
+      return
+    }
+
+    // Prompt/verify microphone permission for mobile browsers (iOS Safari / Android Chrome)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        // Stop temporary stream tracks so SpeechRecognition can lock onto hardware mic
+        stream.getTracks().forEach(track => track.stop())
+      }
+    } catch (micErr: any) {
+      console.warn('[VoiceControls] Microphone permission denied:', micErr)
+      alert('Microphone access was denied. Please allow microphone permission in your browser settings to dictate with voice.')
+      return
+    }
+
     const recognition = new SpeechRecognition()
     recognition.continuous = false
     recognition.interimResults = true
-    recognition.lang = 'en-US'
+    recognition.lang = navigator.language || 'en-US'
 
     recognition.onstart = () => {
       setIsListening(true)
@@ -160,8 +179,13 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
     }
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error)
+      console.error('[VoiceControls] Speech recognition error:', event.error)
       setIsListening(false)
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        alert('Microphone permission denied. Please allow microphone access in site settings.')
+      } else if (event.error === 'audio-capture') {
+        alert('Microphone hardware was not found or is in use by another app.')
+      }
     }
 
     recognition.onend = () => {
@@ -169,7 +193,12 @@ export function VoiceControls({ textToRead, onSpeechResult, size = 'md', authTok
     }
 
     recognitionRef.current = recognition
-    recognition.start()
+    try {
+      recognition.start()
+    } catch (startErr) {
+      console.error('[VoiceControls] Start error:', startErr)
+      setIsListening(false)
+    }
   }
 
   const iconBtnClasses = size === 'sm' ? 'w-7 h-7' : 'w-8 h-8'

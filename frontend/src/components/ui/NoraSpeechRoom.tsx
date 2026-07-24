@@ -216,6 +216,13 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
 
     rec.onerror = (e: any) => {
       loopRef.current = false
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed' || e.error === 'audio-capture') {
+        activeRef.current = false
+        setPhase('idle')
+        setStatusMsg('Microphone access denied')
+        setErrorMsg('Microphone permission was denied. Please allow mic access in your browser settings.')
+        return
+      }
       if (e.error === 'no-speech') {
         noSpeechCountRef.current += 1
         if (noSpeechCountRef.current >= 3) {
@@ -262,13 +269,29 @@ export function NoraSpeechRoom({ authToken, onClose }: NoraSpeechRoomProps) {
     }
   }, [askNora, speakText])
 
-  const startSession = useCallback(() => {
+  const startSession = useCallback(async () => {
     activeRef.current = true
     muteRef.current = false
     loopRef.current = false
     noSpeechCountRef.current = 0
     setMuted(false)
     historyRef.current = []
+
+    // Ensure mic permission on user gesture (especially for mobile iOS/Android)
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+        stream.getTracks().forEach(track => track.stop())
+      }
+    } catch (micErr: any) {
+      console.warn('[NoraSpeechRoom] Mic permission denied:', micErr)
+      activeRef.current = false
+      setPhase('idle')
+      setStatusMsg('Microphone access denied')
+      setErrorMsg('Microphone permission was denied. Please allow mic access in browser settings.')
+      return
+    }
+
     startListening()
   }, [startListening])
 

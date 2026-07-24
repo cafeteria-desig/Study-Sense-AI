@@ -25,6 +25,17 @@ export function LiveKitSpeechRoom({ authToken, onClose }: LiveKitSpeechRoomProps
     async function initLiveKitRoom() {
       try {
         setRoomState('connecting')
+
+        // Request microphone permission on mobile browsers before initializing LiveKit WebRTC
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          try {
+            const tempStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            tempStream.getTracks().forEach(track => track.stop())
+          } catch (micErr) {
+            console.warn('[LiveKitSpeechRoom] Microphone permission prompt declined:', micErr)
+          }
+        }
+
         const rawApiUrl = (import.meta.env.VITE_API_URL as string) || ''
         const apiUrl = rawApiUrl.endsWith('/') ? rawApiUrl.slice(0, -1) : rawApiUrl
         const res = await fetch(`${apiUrl}/api/livekit/token`, {
