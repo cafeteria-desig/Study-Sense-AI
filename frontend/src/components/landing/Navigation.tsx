@@ -38,20 +38,12 @@ export function Navigation() {
             className="h-10 sm:h-11 w-auto object-contain rounded-xl transition-transform duration-300 group-hover:scale-105"
           />
           <div className="flex items-center gap-2">
-            <motion.span
-              className="font-offbit text-xl sm:text-2xl font-bold tracking-tight text-[#F4F2EC]"
-              whileHover={{ letterSpacing: '0.04em' }}
-              transition={{ duration: 0.3 }}
-            >
+            <span className="font-offbit text-xl sm:text-2xl font-bold tracking-tight text-[#F4F2EC] group-hover:text-white transition-colors duration-200">
               StudySense
-            </motion.span>
-            <motion.span
-              className="font-offbit text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#8CFFB4]/30 bg-[rgba(140,255,180,0.14)] text-[#8CFFB4] uppercase tracking-wider"
-              whileHover={{ scale: 1.1 }}
-              transition={{ type: 'spring', stiffness: 400 }}
-            >
+            </span>
+            <span className="font-offbit text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full border border-[#8CFFB4]/30 bg-[rgba(140,255,180,0.14)] text-[#8CFFB4] uppercase tracking-wider transition-transform duration-300 group-hover:scale-105">
               AI
-            </motion.span>
+            </span>
           </div>
         </Link>
 
