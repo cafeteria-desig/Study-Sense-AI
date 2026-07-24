@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import { SignUp } from '@clerk/clerk-react'
 import { dark } from '@clerk/themes'
+import { KineticGrid } from '@/components/ui/KineticGrid'
 
 export function RegisterPage() {
   return (
     <div className="min-h-screen w-full bg-[#08080a] text-[#F4F2EC] flex flex-col items-center justify-center px-4 py-8 relative font-sans overflow-y-auto select-none">
+      <KineticGrid globalColor="monochrome" />
       {/* Ambient background glow */}
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-cyan-500/10 blur-[150px] rounded-full pointer-events-none" />
 

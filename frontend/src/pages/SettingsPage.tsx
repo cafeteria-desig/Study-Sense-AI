@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Shield, User, Check, Sparkles, Clock, Play, RotateCcw } from 'lucide-react'
+import { KineticGrid } from '@/components/ui/KineticGrid'
 
 const SPLASH_LAST_SHOWN_KEY = 'studysense_splash_last_shown'
 const SPLASH_MODE_KEY = 'studysense_splash_mode'
@@ -62,8 +63,9 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-positive/20">
-      <main className="max-w-2xl mx-auto px-6 py-20">
+    <div className="min-h-screen bg-background text-foreground selection:bg-positive/20 relative">
+      <KineticGrid globalColor="monochrome" />
+      <main className="max-w-2xl mx-auto px-6 py-20 relative z-10">
         {/* Back navigation */}
         <Link
           to="/dashboard"
